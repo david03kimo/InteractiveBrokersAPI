@@ -218,10 +218,15 @@ class TestApp(EWrapper,EClient):
         
         self.all_positions.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_positions.csv',index=0 )  
         
-        self.trade,self.open_trade=fromCSV()
+        # self.trade,self.open_trade=fromCSV()
+        # print(self.trade)
+        # self.trade=dictTransform(self.trade)
+        # print(self.trade)
         
-        # df_trade=pd.DataFrame(self.trade)
-        # df_trade.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/trades.csv',sep=' ',index=1 )   
+        # c=input('xxxx')
+        # df_trade=pd.DataFrame(**self.trade)
+        df_trade=pd.DataFrame(self.trade)
+        df_trade.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/trades.csv',sep=' ',index=1 )   
              
         return
 
@@ -691,6 +696,10 @@ class TestApp(EWrapper,EClient):
                 self.trade[self.reqId][self.j].update({'SL':self.sl[self.reqId]})
                 print(datetime.fromtimestamp(int(datetime.now().timestamp())),"ExecDetails. ReqId:", reqId, "Symbol:", sym, "SecType:", contract.secType,'Scale-in', 'Side:',execution.side,'Shares:',execution.shares,'Price:',execution.price)
                 send('Scale-in '+execution.side+' '+str(execution.shares)+' '+sym+'@'+str(execution.price),token,chatid)
+                tradeRecord=dictTransform(self.trade)
+                print(tradeRecord,self.open_trade)
+                toCSV(tradeRecord,self.open_trade)
+                
             else:
             
                 self.j=len(self.df[self.reqId])-1
@@ -714,7 +723,9 @@ class TestApp(EWrapper,EClient):
                 print(datetime.fromtimestamp(int(datetime.now().timestamp())),"ExecDetails. ReqId:", reqId, "Symbol:", sym, "SecType:", contract.secType,'Entry', 'Side:',execution.side,'Shares:',execution.shares,'Price:',execution.price)
                 send('Entry '+execution.side+' '+str(execution.shares)+' '+sym+'@'+str(execution.price),token,chatid)
                 # toCSV(self.trade[self.reqId],self.open_trade[self.reqId])
-                # toCSV(tradeRecord,openTrade)
+                tradeRecord=dictTransform(self.trade)
+                print(tradeRecord,self.open_trade)
+                toCSV(tradeRecord,self.open_trade)
                 
             
         else:
@@ -734,6 +745,9 @@ class TestApp(EWrapper,EClient):
                 print(datetime.fromtimestamp(int(datetime.now().timestamp())),"ExecDetails. ReqId:", reqId, "Symbol:", sym, "SecType:", contract.secType,'Exit', 'Side:',execution.side,'Shares:',execution.shares,'Price:',execution.price)
                 send('Exit '+execution.side+' '+str(execution.shares)+' '+sym+'@'+str(execution.price),token,chatid)
                 # toCSV(tradeRecord,openTrade)
+                tradeRecord=dictTransform(self.trade)
+                print(tradeRecord,self.open_trade)
+                toCSV(tradeRecord,self.open_trade)
                     
                 
             except KeyError:
@@ -770,6 +784,9 @@ class TestApp(EWrapper,EClient):
             for j in self.open_trade[pair]:
                 self.trade[pair][j].update({'Average Price':averageCost})
                 self.trade[pair][j].update({'Cumulative Quantity':abs(position)})
+                tradeRecord=dictTransform(self.trade)
+                print(tradeRecord,self.open_trade)
+                toCSV(tradeRecord,self.open_trade)
         
         try:
             self.all_positions.loc[sym]=sym,contract.secType,position,averageCost,round(unrealizedPNL/self.ConversionRate[contract.currency],2),round(realizedPNL/self.ConversionRate[contract.currency],2)
@@ -796,16 +813,24 @@ class TestApp(EWrapper,EClient):
             try:
                 self.trade[self.reqId][self.j].update({'Realized PNL':round(commissionReport.realizedPNL/self.ConversionRate[self.OrderContract[self.reqId].currency],2)})
                 self.trade[self.reqId][self.j]['Commision']=round(self.trade[self.reqId][self.j]['Commision']-commissionReport.commission/self.ConversionRate[commissionReport.currency],2)
+                tradeRecord=dictTransform(self.trade)
+                print(tradeRecord,self.open_trade)
+                toCSV(tradeRecord,self.open_trade)
                 
             except KeyError:
                 return
             
         # toCSV(tradeRecord,openTrade)
         # save trade dict
-        a=[]
-        for i in self.trade.keys():
-            for j in self.trade[i].keys():
-                a.append(self.trade[i][j])
+        tradeRecord=dictTransform(self.trade)
+        print(tradeRecord,self.open_trade)
+        toCSV(tradeRecord,self.open_trade)
+        
+        
+        # a=[]
+        # for i in self.trade.keys():
+        #     for j in self.trade[i].keys():
+        #         a.append(self.trade[i][j])
         # df_trade=pd.DataFrame(a)
         # df_trade.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/trades.csv',sep=',',index=0 )   
         
@@ -991,7 +1016,7 @@ def toCSV(tradeRecord,openTrade):
     df_tradeRecord=pd.DataFrame.from_dict(tradeRecord,orient='index')
     df_tradeRecord.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/trades.csv',mode='w',index=1)
         
-    df_openTrade=pd.DataFrame(openTrade)
+    df_openTrade=pd.DataFrame.from_dict(openTrade,orient='index')
     df_openTrade.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/openTrade.csv',mode='w',index=0)
         
     return
@@ -1025,7 +1050,23 @@ def fromCSV():
         list_openTrade=df_openTrade.loc[0].to_list()
         # print(dict_tradeRecord,list_openTrade)
         return dict_tradeRecord,list_openTrade
-
+    
+def dictTransform(trade):
+    dict={}
+    lst=[]
+    for key,value in trade.items():
+        if '-' in str(key):
+            lst=key.split('-')
+            print(lst)
+            dict[int(lst[0])]={int(lst[1]):trade[key]} # level 2  to level 3 dict
+            print('level 2 dict to level 3')
+        else:
+            for key2 in value.keys():
+                dict[str(key)+'-'+str(key2)]=value[key2]
+            print('level 3 dict to level 2')
+            
+    return dict
+            
 def main():
     # Connect
     app=TestApp()
