@@ -85,6 +85,24 @@ import configparser
 import json
 import os
 
+
+# multi-level dict transformation
+def dictTransform(trade):
+    dict={}
+    lst=[]
+    for key,value in trade.items():
+        if '-' in str(key):
+            lst=key.split('-')
+            # print(lst)
+            dict[int(lst[0])]={int(lst[1]):trade[key]} # level 2  to level 3 dict
+            # print('level 2 dict to level 3')
+        else:
+            for key2 in value.keys():
+                dict[str(key)+'-'+str(key2)]=value[key2]
+            # print('level 3 dict to level 2')
+            
+    return dict
+
 class TestApp(EWrapper,EClient):
     def __init__(self):
         EClient.__init__(self,self)
@@ -218,15 +236,10 @@ class TestApp(EWrapper,EClient):
         
         self.all_positions.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_positions.csv',index=0 )  
         
-        # self.trade,self.open_trade=fromCSV()
-        # print(self.trade)
-        # self.trade=dictTransform(self.trade)
-        # print(self.trade)
-        
-        # c=input('xxxx')
-        # df_trade=pd.DataFrame(**self.trade)
-        df_trade=pd.DataFrame(self.trade)
-        df_trade.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/trades.csv',sep=' ',index=1 )   
+        if os.path.isfile('/Users/apple/Documents/code/Python/IB-native-API/Output/trades.csv') and os.path.isfile('/Users/apple/Documents/code/Python/IB-native-API/Output/openTrade.csv'):
+            self.trade,self.open_trade=fromCSV()
+        else:
+            pass
              
         return
 
@@ -697,7 +710,7 @@ class TestApp(EWrapper,EClient):
                 print(datetime.fromtimestamp(int(datetime.now().timestamp())),"ExecDetails. ReqId:", reqId, "Symbol:", sym, "SecType:", contract.secType,'Scale-in', 'Side:',execution.side,'Shares:',execution.shares,'Price:',execution.price)
                 send('Scale-in '+execution.side+' '+str(execution.shares)+' '+sym+'@'+str(execution.price),token,chatid)
                 tradeRecord=dictTransform(self.trade)
-                print(tradeRecord,self.open_trade)
+                # print(tradeRecord,self.open_trade)
                 toCSV(tradeRecord,self.open_trade)
                 
             else:
@@ -724,7 +737,7 @@ class TestApp(EWrapper,EClient):
                 send('Entry '+execution.side+' '+str(execution.shares)+' '+sym+'@'+str(execution.price),token,chatid)
                 # toCSV(self.trade[self.reqId],self.open_trade[self.reqId])
                 tradeRecord=dictTransform(self.trade)
-                print(tradeRecord,self.open_trade)
+                # print(tradeRecord,self.open_trade)
                 toCSV(tradeRecord,self.open_trade)
                 
             
@@ -746,7 +759,7 @@ class TestApp(EWrapper,EClient):
                 send('Exit '+execution.side+' '+str(execution.shares)+' '+sym+'@'+str(execution.price),token,chatid)
                 # toCSV(tradeRecord,openTrade)
                 tradeRecord=dictTransform(self.trade)
-                print(tradeRecord,self.open_trade)
+                # print(tradeRecord,self.open_trade)
                 toCSV(tradeRecord,self.open_trade)
                     
                 
@@ -785,7 +798,7 @@ class TestApp(EWrapper,EClient):
                 self.trade[pair][j].update({'Average Price':averageCost})
                 self.trade[pair][j].update({'Cumulative Quantity':abs(position)})
                 tradeRecord=dictTransform(self.trade)
-                print(tradeRecord,self.open_trade)
+                # print(tradeRecord,self.open_trade)
                 toCSV(tradeRecord,self.open_trade)
         
         try:
@@ -804,7 +817,7 @@ class TestApp(EWrapper,EClient):
         # Update trade dict
         if commissionReport.realizedPNL == UNSET_DOUBLE:
             try:
-                self.trade[self.reqId][self.j]['Commision']=round(self.trade[self.reqId][self.j]['Commision']-commissionReport.commission/self.ConversionRate[commissionReport.currency],2)
+                self.trade[self.reqId][self.j]['Commision']=round(self.trade[self.reqId][self.j]['Commision']+commissionReport.commission/self.ConversionRate[commissionReport.currency],2)
                 
             except KeyError:
                 return
@@ -812,9 +825,9 @@ class TestApp(EWrapper,EClient):
              
             try:
                 self.trade[self.reqId][self.j].update({'Realized PNL':round(commissionReport.realizedPNL/self.ConversionRate[self.OrderContract[self.reqId].currency],2)})
-                self.trade[self.reqId][self.j]['Commision']=round(self.trade[self.reqId][self.j]['Commision']-commissionReport.commission/self.ConversionRate[commissionReport.currency],2)
+                self.trade[self.reqId][self.j]['Commision']=round(self.trade[self.reqId][self.j]['Commision']+commissionReport.commission/self.ConversionRate[commissionReport.currency],2)
                 tradeRecord=dictTransform(self.trade)
-                print(tradeRecord,self.open_trade)
+                # print(tradeRecord,self.open_trade)
                 toCSV(tradeRecord,self.open_trade)
                 
             except KeyError:
@@ -823,7 +836,7 @@ class TestApp(EWrapper,EClient):
         # toCSV(tradeRecord,openTrade)
         # save trade dict
         tradeRecord=dictTransform(self.trade)
-        print(tradeRecord,self.open_trade)
+        # print(tradeRecord,self.open_trade)
         toCSV(tradeRecord,self.open_trade)
         
         
@@ -1011,61 +1024,38 @@ def send(text,token,chatid):
     resp = requests.post('https://api.telegram.org/bot{}/sendMessage'.format(token), params)
     resp.raise_for_status()
 
-# 將交易紀錄寫入csv
+# write trades record to csv
 def toCSV(tradeRecord,openTrade):
     df_tradeRecord=pd.DataFrame.from_dict(tradeRecord,orient='index')
     df_tradeRecord.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/trades.csv',mode='w',index=1)
         
     df_openTrade=pd.DataFrame.from_dict(openTrade,orient='index')
-    df_openTrade.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/openTrade.csv',mode='w',index=0)
+    df_openTrade.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/openTrade.csv',mode='w',index=1)
         
     return
 
-# 從CSV讀入交易紀錄
+# read trades record from csv
 def fromCSV():
     dict_tradeRecord={}
-    list_openTrade=[]
-    
-    if not os.path.isfile('/Users/apple/Documents/code/Python/IB-native-API/Output/trades.csv'):
-        # print({},[])
-        return {},[]
-    elif os.path.isfile('/Users/apple/Documents/code/Python/IB-native-API/Output/trades.csv') and not os.path.isfile('/Users/apple/Documents/code/Python/IB-native-API/Output/openTrade.csv'):
-        df_tradeRecord=pd.read_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/trades.csv',index_col=0)
-        for index in df_tradeRecord.index:
-            dict_tradeRecord[df_tradeRecord.loc[index,'DateTime']]=df_tradeRecord.loc[index].to_dict()
-            # dict_tradeRecord.drop(index=dict_tradeRecord[dict_tradeRecord['Exit Price']==0].index,axis = 0,inplace = True)
-        # print(dict_tradeRecord,[])
-        return dict_tradeRecord,[]
-    elif os.path.isfile('/Users/apple/Documents/code/Python/IB-native-API/Output/trades.csv') and os.path.isfile('/Users/apple/Documents/code/Python/IB-native-API/Output/openTrade.csv'):
-        df_tradeRecord=pd.read_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/trades.csv',index_col=0)
-        for index in df_tradeRecord.index:
-            dict_tradeRecord[df_tradeRecord.loc[index,'DateTime']]=df_tradeRecord.loc[index].to_dict()
-            # dict_tradeRecord.drop(index=dict_tradeRecord[dict_tradeRecord['Exit Price']==0].index,axis = 0,inplace = True)
-        try:
-            df_openTrade=pd.read_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/openTrade.csv')
-            # df_openTrade=pd.read_csv('/Users/apple/Documents/code/PythonX86/Output/openTrade.csv',index=0)
-        except:
-            # print(dict_tradeRecord,[])
-            return dict_tradeRecord,[]
-        list_openTrade=df_openTrade.loc[0].to_list()
-        # print(dict_tradeRecord,list_openTrade)
-        return dict_tradeRecord,list_openTrade
-    
-def dictTransform(trade):
-    dict={}
-    lst=[]
-    for key,value in trade.items():
-        if '-' in str(key):
-            lst=key.split('-')
-            print(lst)
-            dict[int(lst[0])]={int(lst[1]):trade[key]} # level 2  to level 3 dict
-            print('level 2 dict to level 3')
+    dict_openTrade={}
+    df_tradeRecord=pd.read_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/trades.csv',index_col=0)
+    for index in df_tradeRecord.index:
+        dict_tradeRecord[index]=df_tradeRecord.loc[index].to_dict()
+    dict_tradeRecord=dictTransform(dict_tradeRecord)
+    df_openTrade=pd.read_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/openTrade.csv',index_col=0)
+    df_openTrade['0']=df_openTrade['0'].fillna(-1)
+    df_openTrade['0']=df_openTrade['0'].astype(int)
+    df_openTrade['0']=df_openTrade['0'].astype(str)
+    df_openTrade['0']=df_openTrade['0'].replace('-1',np.nan)
+    for index in df_openTrade.index:
+        dict_openTrade[index]=list(df_openTrade.loc[index])
+    for key in dict_openTrade:
+        if dict_openTrade[key]==[np.nan]:
+            dict_openTrade[key]=[]
         else:
-            for key2 in value.keys():
-                dict[str(key)+'-'+str(key2)]=value[key2]
-            print('level 3 dict to level 2')
-            
-    return dict
+            dict_openTrade[key]=[int(x) for x in dict_openTrade[key]]
+    return dict_tradeRecord,dict_openTrade
+    
             
 def main():
     # Connect
