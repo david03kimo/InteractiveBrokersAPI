@@ -33,7 +33,7 @@ pyramiding need close the trade then run
 sl!=np.nan
 reqUpdatePortfolio after executeDetails to update Unrealized and realized PNL
 list convert to df after Bar time change ,check any errors
-clear df1 after resample
+clear df_tick after resample
 add IBAPI path to default
 K bar time lag：use shioaji method
 trade record disappered :write the trade record to csv:use shioaji tradeRecord csv.read csv：self.trade to_csv and read from csv can continiue previous position.restart the positions and trade：previous position ,Save the trade to csv,and read again,
@@ -147,7 +147,9 @@ class TestApp(EWrapper,EClient):
         config.read('/Users/apple/Documents/code/Python/IB-native-API/Output/config.cfg')
         self.BetAmout=float(config.get('MM','BetAmout'))
         self.rr=float(config.get('MM','rr'))
-        self.period=int(config.get('MM','period')) #3m K
+        self.timeframe1=int(config.get('MM','timeframe1'))
+        self.timeframe2=int(config.get('MM','timeframe2'))
+        self.timeframe3=int(config.get('MM','timeframe3'))
         
         # basic setup
         self.StrategyType='API'  # 告訴策略用API方式來處理訊號
@@ -160,8 +162,10 @@ class TestApp(EWrapper,EClient):
         self.isEUstock=False
         self.data = {} #Historical
         self.data1 = {} #Update
-        self.df={} # Historical
-        self.df1={} #Update 
+        self.df1={}
+        self.df2={} 
+        self.df3={} 
+        self.df_tick={} 
         self.df_res={}
         
         # preset dict
@@ -224,15 +228,17 @@ class TestApp(EWrapper,EClient):
             self.info[pair]={}
             self.data[pair] = [] #Historical
             self.data1[pair] = [] #Update
-            self.df[pair]=[] # Historical
-            self.df1[pair]=[] #Update 
+            self.df1[pair]=[] # Historical
+            self.df2[pair]=[] # Historical
+            self.df3[pair]=[] # Historical
+            self.df_tick[pair]=[] #Update 
             self.df_res[pair]=[]
             self.position[pair]=0.0
             self.signal[pair]=False
             self.entryprice[pair]=np.nan
             self.tp[pair]=np.nan
             self.sl[pair]=np.nan
-            self.LastOrderTime[pair]=int(datetime.now().timestamp())-5*self.period*60
+            self.LastOrderTime[pair]=int(datetime.now().timestamp())-5*self.timeframe1*60
             self.trade[pair]={}
             self.open_trade[pair]=[]
             self.SLOrderId[pair]=np.nan
@@ -269,9 +275,9 @@ class TestApp(EWrapper,EClient):
     def historicalDataEnd(self, reqId, start: str, end: str):
         self.data1[reqId].append(self.data[reqId][-1])
         del self.data[reqId][-1]
-        self.df[reqId] = pd.DataFrame(self.data[reqId],columns=['DateTime','Open','High','Low', 'Close','Volume'])
-        self.df[reqId]['DateTime'] = pd.to_datetime(self.df[reqId]['DateTime'],unit='s')
-        # self.df[reqId].to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/df'+str(reqId)+'.csv',index=0 ,float_format='%.5f')   
+        self.df1[reqId] = pd.DataFrame(self.data[reqId],columns=['DateTime','Open','High','Low', 'Close','Volume'])
+        self.df1[reqId]['DateTime'] = pd.to_datetime(self.df1[reqId]['DateTime'],unit='s')
+        # self.df1[reqId].to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/df1_'+str(reqId)+'.csv',index=0 ,float_format='%.5f')   
         self.data[reqId]=[] #清掉是否有助於記憶體的節省？
         super().historicalDataEnd(reqId, start, end)
         # print( datetime.fromtimestamp(int(datetime.now().timestamp())),'HistoricalDataEnd. ReqId:', reqId, 'from', start, 'to', end)
@@ -288,47 +294,73 @@ class TestApp(EWrapper,EClient):
         self.pre_date=self.now_date #Calculate the bar.date and previous bar.date
         self.now_date=int(bar.date)
         
-        # for test df1 ticks income,delete after test
-        # self.df1[reqId] = pd.DataFrame(self.data1[reqId],columns=['DateTime','Open','High','Low', 'Close','Volume'])
-        # self.df1[reqId]['DateTime'] = pd.to_datetime(self.df1[reqId]['DateTime'],unit='s') 
-        # self.df1[reqId]=self.df1[reqId].set_index('DateTime')
-        # self.df1[reqId].to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/df['+str(reqId)+'].csv',index=1 ,float_format='%.5f')  
+        # for test df_tick ticks income,delete after test
+        # self.df_tick[reqId] = pd.DataFrame(self.data1[reqId],columns=['DateTime','Open','High','Low', 'Close','Volume'])
+        # self.df_tick[reqId]['DateTime'] = pd.to_datetime(self.df_tick[reqId]['DateTime'],unit='s') 
+        # self.df_tick[reqId]=self.df_tick[reqId].set_index('DateTime')
+        # self.df_tick[reqId].to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/df['+str(reqId)+'].csv',index=1 ,float_format='%.5f')  
 
         
         if self.now_date != self.pre_date : #Resample once after the bar closed
-            self.df1[reqId] = pd.DataFrame(self.data1[reqId],columns=['DateTime','Open','High','Low', 'Close','Volume'])
-            self.df1[reqId]['DateTime'] = pd.to_datetime(self.df1[reqId]['DateTime'],unit='s') 
-            self.df1[reqId]=self.df1[reqId].set_index('DateTime')
-            # self.df1[reqId].to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/df['+str(reqId)+'].csv',index=1 ,float_format='%.5f')  
+            self.df_tick[reqId] = pd.DataFrame(self.data1[reqId],columns=['DateTime','Open','High','Low', 'Close','Volume'])
+            self.df_tick[reqId]['DateTime'] = pd.to_datetime(self.df_tick[reqId]['DateTime'],unit='s') 
+            self.df_tick[reqId]=self.df_tick[reqId].set_index('DateTime')
+            # self.df_tick[reqId].to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/df['+str(reqId)+'].csv',index=1 ,float_format='%.5f')  
 
 
-            self.df_res[reqId]=self.df1[reqId].resample(str(self.period)+'min', closed='left', label='left').agg(self.res_dict)
-            # self.df1.drop(self.df1.index, axis=0,inplace=True) 
-            self.df1[reqId]=[]
+            self.df_res[reqId]=self.df_tick[reqId].resample(str(self.timeframe1)+'min', closed='left', label='left').agg(self.res_dict)
+            # self.df_tick.drop(self.df_tick.index, axis=0,inplace=True) 
+            self.df_tick[reqId]=[]
             del self.data1[reqId][0:len(self.data1[reqId])-1]
             self.df_res[reqId].drop(self.df_res[reqId].index[-1], axis=0, inplace=True) #delete the new open bar at lastest appended row
-            print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],'Bar Label:',self.df_res[reqId].index[-1].strftime('%F %H:%M') if len(self.df_res[reqId])!=0 else 'No Resample Bar')
+            print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],str(self.timeframe1)+'K Bar:',self.df_res[reqId].index[-1].strftime('%F %H:%M') if len(self.df_res[reqId])!=0 else 'No Resample Bar')
             # self.df_res[reqId].to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/df_res'+str(reqId)+'.csv', mode='a', header=False,float_format='%.5f')
             # self.df_res[reqId].to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/df_res'+str(reqId)+'.csv',index=1 ,float_format='%.5f')
             self.df_res[reqId].reset_index(inplace=True) 
 
-            self.df[reqId]=pd.concat([self.df[reqId], self.df_res[reqId]],ignore_index=True)
-            # self.df[reqId].to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/df'+str(reqId)+'.csv',index=0 ,float_format='%.5f') 
+            self.df1[reqId]=pd.concat([self.df1[reqId], self.df_res[reqId]],ignore_index=True)
+            # self.df1[reqId].to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/df1_'+str(reqId)+'.csv',index=0 ,float_format='%.5f') 
             
-            # print('type of df1:',type(self.df1))
+            # print('type of df_tick:',type(self.df_tick))
+            
+            
+            # higher time frame Bar close
+            if self.now_date != self.pre_date and self.now_date/(self.timeframe2*60)==self.now_date//(self.timeframe2*60):
+                # print(datetime.fromtimestamp(int(datetime.now().timestamp())),'self.timeframe2',self.timeframe2)
+                # print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.now_date,bar.date,self.now_date/self.timeframe2,self.now_date//self.timeframe2)
+                # self.df2[reqId]=self.df1[reqId].set_index('DateTime')
+                self.df2[reqId]=self.df1[reqId].set_index('DateTime').resample(str(self.timeframe2)+'min', closed='left', label='left').agg(self.res_dict)
+                # self.df1[reqId].reset_index(inplace=True) 
+                
+                print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],str(self.timeframe2)+'K Bar:',self.df2[reqId].index[-1].strftime('%F %H:%M'))
+                self.df2[reqId].reset_index(inplace=True) 
+                self.df2[reqId].to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/df2_'+str(reqId)+'.csv',index=0 ,float_format='%.5f') 
+
+                
+                
+                if self.now_date != self.pre_date and self.now_date/(self.timeframe3*60)==self.now_date//(self.timeframe3*60):
+                    # print(datetime.fromtimestamp(int(datetime.now().timestamp())),'self.timeframe3',self.timeframe3)
+                    # print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.now_date,bar.date,self.now_date/self.timeframe3,self.now_date//self.timeframe3)
+                    self.df3[reqId]=self.df1[reqId].set_index('DateTime').resample(str(self.timeframe3)+'min', closed='left', label='left').agg(self.res_dict)
+                    print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],str(self.timeframe3)+'K Bar:',self.df3[reqId].index[-1].strftime('%F %H:%M'))
+                    self.df3[reqId].reset_index(inplace=True) 
+                    self.df3[reqId].to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/df3_'+str(reqId)+'.csv',index=0 ,float_format='%.5f') 
+
+    
+            
 
             
-            if (self.all_positions.loc[self.pair[reqId],'Quantity']==0.0 or (self.all_positions.loc[self.pair[reqId],'Quantity']!=0.0 and self.mode[reqId]=='PYRAMIDING')) and bar.close>self.all_positions.loc[self.pair[reqId],'Average Cost'] and int(datetime.now().timestamp())-self.LastOrderTime[reqId]>5*self.period*60:
+            if (self.all_positions.loc[self.pair[reqId],'Quantity']==0.0 or (self.all_positions.loc[self.pair[reqId],'Quantity']!=0.0 and self.mode[reqId]=='PYRAMIDING')) and bar.close>self.all_positions.loc[self.pair[reqId],'Average Cost'] and int(datetime.now().timestamp())-self.LastOrderTime[reqId]>5*self.timeframe1*60:
                 
-                self.signal[reqId]=self.st._RSI(self.df[reqId])
+                self.signal[reqId]=self.st._RSI(self.df1[reqId])
                 if self.isBusy:
                     time.sleep(2)
                 if self.signal[reqId] == self.direction[reqId]: # if entry signal produced and check no position then entry
                     if self.all_positions.loc[self.pair[reqId],'Quantity']==0.0 and self.mode[reqId]=='':
                         
                         self.entryprice[reqId]=round(bar.close,self.info[reqId].get('round'))
-                        self.tp[reqId]=self.rm.TP(self.df[reqId],self.info[reqId],self.signal[reqId],self.rr,len(self.df[reqId])-1)
-                        self.sl[reqId]=self.rm.SL(self.df[reqId],self.info[reqId],self.signal[reqId],len(self.df[reqId])-1)
+                        self.tp[reqId]=self.rm.TP(self.df1[reqId],self.info[reqId],self.signal[reqId],self.rr,len(self.df1[reqId])-1)
+                        self.sl[reqId]=self.rm.SL(self.df1[reqId],self.info[reqId],self.signal[reqId],len(self.df1[reqId])-1)
                         # print(self.OrderContract[reqId],self.ConversionRate)
                         
                         # self.qty[reqId]=max(1,round(self.BetAmout/(abs(self.entryprice[reqId]-self.sl[reqId])/self.ConversionRate[reqId]),0))
@@ -343,7 +375,7 @@ class TestApp(EWrapper,EClient):
                     elif self.mode[reqId]=='PYRAMIDING':
                         self.entryprice[reqId]=round(bar.close,self.info[reqId].get('round'))
                         # print('entryprice:',self.entryprice[reqId])
-                        self.sl[reqId]=self.rm.Risk4(self.df[reqId],self.info[reqId],self.signal[reqId],self.trade[reqId],self.open_trade[reqId])
+                        self.sl[reqId]=self.rm.Risk4(self.df1[reqId],self.info[reqId],self.signal[reqId],self.trade[reqId],self.open_trade[reqId])
                         if len(self.open_trade[reqId])==0:
                             self.qty[reqId]=max(1,round(self.BetAmout/(abs(self.entryprice[reqId]-self.sl[reqId])/self.ConversionRate[self.OrderContract[reqId].currency]),0))
                             self.reqId=reqId
@@ -721,10 +753,10 @@ class TestApp(EWrapper,EClient):
                 
             else:
             
-                self.j=len(self.df[self.reqId])-1
-                print(self.trade[self.reqId])
+                self.j=len(self.df1[self.reqId])-1
+                # print(self.trade[self.reqId])
                 self.trade[self.reqId][self.j]={'ID':self.j,
-                                'DateTime':self.df[self.reqId].loc[self.df[self.reqId].index[-1],'DateTime'],
+                                'DateTime':self.df1[self.reqId].loc[self.df1[self.reqId].index[-1],'DateTime'],
                                 'Symbol':self.pair[self.reqId],
                                 'Side':'BUY' if execution.side=='BOT' else 'SELL',
                                 'Price':execution.price,
@@ -965,7 +997,7 @@ class TestApp(EWrapper,EClient):
     #         print(datetime.fromtimestamp(int(datetime.now().timestamp())),"Price Increment.", priceIncrement)
 
     def ifDataDelay(self):
-        w=5*self.period*60
+        w=5*self.timeframe1*60
         while True:
             if int(datetime.now().timestamp()) - self.LastReceivedDataTime >w:
                 print(datetime.fromtimestamp(int(datetime.now().timestamp())),w,' sec delayed,last receieved:',datetime.fromtimestamp(self.LastReceivedDataTime))
@@ -983,12 +1015,12 @@ class TestApp(EWrapper,EClient):
                         raise EOFError
                         
                     time.sleep(3)
-            time.sleep(self.period*60)
+            time.sleep(self.timeframe1*60)
         return
     
     
     # def ifDataDelay(self):
-    #     w=5*self.period*60
+    #     w=5*self.timeframe1*60
         
     #     if int(datetime.now().timestamp()) - self.LastReceivedDataTime >w:
     #         if int(datetime.now().timestamp())-self.lastNoticeTime>300:
@@ -1015,7 +1047,7 @@ class TestApp(EWrapper,EClient):
     #     time.sleep(2)
         
     #     for pair in range(len(self.pair)):
-    #         self.reqHistoricalData(pair,self.QuoteContract[pair],'','1 W',str(self.period)+' mins','MIDPOINT',0,2,True,[])
+    #         self.reqHistoricalData(pair,self.QuoteContract[pair],'','1 W',str(self.timeframe1)+' mins','MIDPOINT',0,2,True,[])
     #     self.run()
     #     return
 
@@ -1077,7 +1109,7 @@ def main():
 
     # request historical data
     for pair in range(len(app.pair)):
-        app.reqHistoricalData(pair,app.QuoteContract[pair],'','1 W',str(app.period)+' mins','MIDPOINT',0,2,True,[])
+        app.reqHistoricalData(pair,app.QuoteContract[pair],'','1 W',str(app.timeframe1)+' mins','MIDPOINT',0,2,True,[])
         if not app.OrderContract[pair].currency in app.ConversionRate and app.OrderContract[pair].currency !='USD':
             if app.OrderContract[pair].currency in ['EUR','GBP','AUD','NZD']:
                 QuoteContract=app.xxxUSD(app.OrderContract[pair].currency)
