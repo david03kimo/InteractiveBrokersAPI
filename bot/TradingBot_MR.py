@@ -36,14 +36,20 @@ list convert to df after Bar time change ,check any errors
 clear df1 after resample
 add IBAPI path to default
 K bar time lag：use shioaji method
+trade record disappered :write the trade record to csv:use shioaji tradeRecord csv.read csv：self.trade to_csv and read from csv can continiue previous position.restart the positions and trade：previous position ,Save the trade to csv,and read again,
 -----Finished
 
------To do
+-----testing----
 2nd time signal entry,scale-in,modify order: trade:'last_price'
-trade record disappered :write the trade record to csv:use shioaji tradeRecord csv.read csv：self.trade to_csv and read from csv can continiue previous position
-re-read pair and re-reqHistoricalData function.
+no opentrade
+-----testing----
+
+-----To do
+add 2 timeframe to filt signal
+change to self.trade and easy restart
+re-read pair and re-reqHistoricalData function.And considerate trade record in csv
 considerate margin availability
-hang cannot restart,use quqe,check ram and cpu，unlimit isBusy，
+hang cannot restart,use quqe,check ram and cpu，unlimit isBusy，que
 report open order of SL to check：auto add SL to positions without SL order
 xagusd error
 market close,open time,don't need to data lag and restart
@@ -52,7 +58,7 @@ historicalDataUpdate send double same order
 test AUD:Take a look at Minimum Price Increment to see how you can use the MarketRuleIds field in the ContractDetails object and IBApi::EClient::reqMarketRule: 
 volumn increment
 strange XAUUSD SL
-restart the positions and trade：previous position ,Save the trade to csv,and read again,handle not in pair list positions.
+handle not in pair list positions.
 try a test.openorder and orderstatus and completedOrder to get SL order and avoid order repeat. MKT2LMT,open order=0.network lag,send order but not yet execute,so send again at next bar.
 data resample structure.dict:symbol,action,mode,rr,bet,info(mintick),trade,self.trade and all_position combine and use dict. use for j in trade.keys():取代 for j in open_trade:,and considerate renew csv or add tradingview alert.
 Risk5:finetune SL:lower than 20 lowest,and at least 6 pips to close.    
@@ -716,6 +722,7 @@ class TestApp(EWrapper,EClient):
             else:
             
                 self.j=len(self.df[self.reqId])-1
+                print(self.trade[self.reqId])
                 self.trade[self.reqId][self.j]={'ID':self.j,
                                 'DateTime':self.df[self.reqId].loc[self.df[self.reqId].index[-1],'DateTime'],
                                 'Symbol':self.pair[self.reqId],
@@ -973,7 +980,7 @@ class TestApp(EWrapper,EClient):
                             token,chatid=read_token()
                             send('Data lag',token,chatid)
                             self.lastNoticeTime=int(datetime.now().timestamp())
-                        # raise EOFError
+                        raise EOFError
                         
                     time.sleep(3)
             time.sleep(self.period*60)
@@ -1061,8 +1068,8 @@ def main():
     # Connect
     app=TestApp()
     # app.connect('127.0.0.1',7497,1) # IB TWS
-    # app.connect('127.0.0.1',7497,0) # IB TWS paper account
-    app.connect('127.0.0.1',4002,0) # IB Gateway
+    app.connect('127.0.0.1',7497,0) # IB TWS paper account
+    # app.connect('127.0.0.1',4002,0) # IB Gateway
     time.sleep(1)
     
     # Update Portfolio
@@ -1079,9 +1086,9 @@ def main():
                 QuoteContract=app.USDxxx(app.OrderContract[pair].currency)
                 app.reqRealTimeBars(pair, QuoteContract, 5, "MIDPOINT", False, [])
             
-    t = threading.Thread(target = app.ifDataDelay,name='CheckDelay')
-    t.daemon = True
-    t.start() 
+    # t = threading.Thread(target = app.ifDataDelay,name='CheckDelay')
+    # t.daemon = True
+    # t.start() 
     
     # app.start() 
     app.run()
