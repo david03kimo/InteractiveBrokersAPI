@@ -46,6 +46,7 @@ no opentrade
 
 -----To do
 add 2 timeframe to filt signal
+filter every timeframe
 change to self.trade and easy restart
 re-read pair and re-reqHistoricalData function.And considerate trade record in csv
 considerate margin availability
@@ -122,6 +123,8 @@ class TestApp(EWrapper,EClient):
         
         self.pair=[]
         self.direction=[]
+        self.direction2={}
+        self.direction3={}
         self.mode=[]
         
         for i in order:
@@ -200,7 +203,9 @@ class TestApp(EWrapper,EClient):
         self.isBusy=False
         
         # Order control
-        self.signal={} # For placing Bracket Order
+        self.signal1={} # For placing Bracket Order
+        self.signal2={} # For placing Bracket Order
+        self.signal3={} # For placing Bracket Order
         self.entryprice={}
         self.tp={}
         self.sl={}
@@ -234,7 +239,11 @@ class TestApp(EWrapper,EClient):
             self.df_tick[pair]=[] #Update 
             self.df_res[pair]=[]
             self.position[pair]=0.0
-            self.signal[pair]=False
+            self.signal1[pair]=False
+            self.signal2[pair]=False
+            self.signal3[pair]=False
+            self.direction2[pair]='None'
+            self.direction3[pair]='None'
             self.entryprice[pair]=np.nan
             self.tp[pair]=np.nan
             self.sl[pair]=np.nan
@@ -331,12 +340,22 @@ class TestApp(EWrapper,EClient):
                 # self.df2[reqId]=self.df1[reqId].set_index('DateTime')
                 self.df2[reqId]=self.df1[reqId].set_index('DateTime').resample(str(self.timeframe2)+'min', closed='left', label='left').agg(self.res_dict)
                 # self.df1[reqId].reset_index(inplace=True) 
+                self.df2[reqId].dropna(axis=0, how='any', inplace=True)  # 去掉交易時間外的空行
+                self.df2[reqId].reset_index(drop=True)
+                
                 
                 print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],str(self.timeframe2)+'K Bar:',self.df2[reqId].index[-1].strftime('%F %H:%M'))
                 self.df2[reqId].reset_index(inplace=True) 
-                self.df2[reqId].to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/df2_'+str(reqId)+'.csv',index=0 ,float_format='%.5f') 
-
-                
+                # self.df2[reqId].to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/df2_'+str(reqId)+'.csv',index=0 ,float_format='%.5f') 
+                self.signal2[reqId]=self.st._RSI(self.df2[reqId])
+                if self.signal2[reqId] =='BUY':  #進場訊號
+                    self.direction2[reqId]='BUY'
+                    print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],str(self.timeframe2)+'m RSI low')
+                    # sendTelegram(str(self,timeFrame2)+'m RSI low', token, chatid)
+                elif self.signal2[reqId] =='SELL':
+                    self.direction2[reqId]='SELL'
+                    print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],str(self.timeframe2)+'m RSI high')
+                    # sendTelegram(str(timeFrame2)+'m RSI high', token, chatid) 
                 
                 if self.now_date != self.pre_date and self.now_date/(self.timeframe3*60)==self.now_date//(self.timeframe3*60):
                     # print(datetime.fromtimestamp(int(datetime.now().timestamp())),'self.timeframe3',self.timeframe3)
@@ -344,30 +363,42 @@ class TestApp(EWrapper,EClient):
                     self.df3[reqId]=self.df1[reqId].set_index('DateTime').resample(str(self.timeframe3)+'min', closed='left', label='left').agg(self.res_dict)
                     print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],str(self.timeframe3)+'K Bar:',self.df3[reqId].index[-1].strftime('%F %H:%M'))
                     self.df3[reqId].reset_index(inplace=True) 
-                    self.df3[reqId].to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/df3_'+str(reqId)+'.csv',index=0 ,float_format='%.5f') 
-
-    
-            
-
+                    self.df3[reqId].dropna(axis=0, how='any', inplace=True)  # 去掉交易時間外的空行
+                    self.df3[reqId].reset_index(drop=True)
+                    # self.df3[reqId].to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/df3_'+str(reqId)+'.csv',index=0 ,float_format='%.5f') 
+                    # self.signal3[reqId]=self.st._RSI(self.df3[reqId])
+                    # if self.signal3[reqId] =='BUY':  #進場訊號
+                    #     self.direction3[reqId]='BUY'
+                    #     print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],str(self.timeFrame3)+'m RSI low')
+                    #     # sendTelegram(str(self,timeFrame2)+'m RSI low', token, chatid)
+                    # elif self.signal3[reqId] =='SELL':
+                    #     self.direction3[reqId]='SELL'
+                    #     print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],str(self.timeFrame3)+'m RSI high')
+                        # sendTelegram(str(timeFrame2)+'m RSI high', token, chatid) 
             
             if (self.all_positions.loc[self.pair[reqId],'Quantity']==0.0 or (self.all_positions.loc[self.pair[reqId],'Quantity']!=0.0 and self.mode[reqId]=='PYRAMIDING')) and bar.close>self.all_positions.loc[self.pair[reqId],'Average Cost'] and int(datetime.now().timestamp())-self.LastOrderTime[reqId]>5*self.timeframe1*60:
                 
-                self.signal[reqId]=self.st._RSI(self.df1[reqId])
+                self.signal1[reqId]=self.st._RSI(self.df1[reqId])
                 if self.isBusy:
                     time.sleep(2)
-                if self.signal[reqId] == self.direction[reqId]: # if entry signal produced and check no position then entry
+                
+                # print(self.signal1[reqId])
+                # print(self.direction[reqId])
+                # print(self.direction2[reqId])
+                
+                if self.signal1[reqId] == self.direction2[reqId] and self.signal1[reqId] ==self.direction[reqId]: # if entry signal produced and check no position then entry
                     if self.all_positions.loc[self.pair[reqId],'Quantity']==0.0 and self.mode[reqId]=='':
                         
                         self.entryprice[reqId]=round(bar.close,self.info[reqId].get('round'))
-                        self.tp[reqId]=self.rm.TP(self.df1[reqId],self.info[reqId],self.signal[reqId],self.rr,len(self.df1[reqId])-1)
-                        self.sl[reqId]=self.rm.SL(self.df1[reqId],self.info[reqId],self.signal[reqId],len(self.df1[reqId])-1)
+                        self.tp[reqId]=self.rm.TP(self.df1[reqId],self.info[reqId],self.signal1[reqId],self.rr,len(self.df1[reqId])-1)
+                        self.sl[reqId]=self.rm.SL(self.df1[reqId],self.info[reqId],self.signal1[reqId],len(self.df1[reqId])-1)
                         # print(self.OrderContract[reqId],self.ConversionRate)
                         
                         # self.qty[reqId]=max(1,round(self.BetAmout/(abs(self.entryprice[reqId]-self.sl[reqId])/self.ConversionRate[reqId]),0))
                         self.qty[reqId]=max(1,round(self.BetAmout/(abs(self.entryprice[reqId]-self.sl[reqId])/self.ConversionRate[self.OrderContract[reqId].currency]),0))
                         
                         self.reqId=reqId
-                        print(datetime.fromtimestamp(int(datetime.now().timestamp())),'historicalDataUpdate reqId:',self.reqId,'Symbol:',self.pair[self.reqId],'current positions:',self.all_positions.loc[self.pair[self.reqId],'Quantity'],self.signal[reqId],'Quantity:',self.qty[reqId],'Entry:',self.entryprice[reqId],'TP:',self.tp[reqId],'SL:',self.sl[reqId])
+                        print(datetime.fromtimestamp(int(datetime.now().timestamp())),'historicalDataUpdate reqId:',self.reqId,'Symbol:',self.pair[self.reqId],'current positions:',self.all_positions.loc[self.pair[self.reqId],'Quantity'],self.signal1[reqId],'Quantity:',self.qty[reqId],'Entry:',self.entryprice[reqId],'TP:',self.tp[reqId],'SL:',self.sl[reqId])
                         self.isBusy=True
                         # print(datetime.fromtimestamp(int(datetime.now().timestamp())),'Busy:',self.isBusy)
                         self.start()    
@@ -375,12 +406,12 @@ class TestApp(EWrapper,EClient):
                     elif self.mode[reqId]=='PYRAMIDING':
                         self.entryprice[reqId]=round(bar.close,self.info[reqId].get('round'))
                         # print('entryprice:',self.entryprice[reqId])
-                        self.sl[reqId]=self.rm.Risk4(self.df1[reqId],self.info[reqId],self.signal[reqId],self.trade[reqId],self.open_trade[reqId])
+                        self.sl[reqId]=self.rm.Risk4(self.df1[reqId],self.info[reqId],self.signal1[reqId],self.trade[reqId],self.open_trade[reqId])
                         if len(self.open_trade[reqId])==0:
                             self.qty[reqId]=max(1,round(self.BetAmout/(abs(self.entryprice[reqId]-self.sl[reqId])/self.ConversionRate[self.OrderContract[reqId].currency]),0))
                             self.reqId=reqId
                             self.isBusy=True
-                            print(datetime.fromtimestamp(int(datetime.now().timestamp())),'historicalDataUpdate reqId:',self.reqId,'Symbol:',self.pair[self.reqId],'current positions:',self.all_positions.loc[self.pair[self.reqId],'Quantity'],self.signal[reqId],'Quantity:',self.qty[reqId],'Entry:',self.entryprice[reqId],'SL:',self.sl[reqId])
+                            print(datetime.fromtimestamp(int(datetime.now().timestamp())),'historicalDataUpdate reqId:',self.reqId,'Symbol:',self.pair[self.reqId],'current positions:',self.all_positions.loc[self.pair[self.reqId],'Quantity'],self.signal1[reqId],'Quantity:',self.qty[reqId],'Entry:',self.entryprice[reqId],'SL:',self.sl[reqId])
                             self.start1() 
                         elif len(self.open_trade[reqId])!=0:
                             for j in self.open_trade[reqId]:
@@ -388,7 +419,7 @@ class TestApp(EWrapper,EClient):
                                     self.qty[reqId]=self.trade[reqId][j].get('Cumulative Quantity')*0.6
                                     self.reqId=reqId
                                     self.isBusy=True
-                                    print(datetime.fromtimestamp(int(datetime.now().timestamp())),'historicalDataUpdate reqId:',self.reqId,'Symbol:',self.pair[self.reqId],'current positions:',self.all_positions.loc[self.pair[self.reqId],'Quantity'],self.signal[reqId],'Quantity:',self.qty[reqId],'Entry:',self.entryprice[reqId],'SL:',self.sl[reqId])
+                                    print(datetime.fromtimestamp(int(datetime.now().timestamp())),'historicalDataUpdate reqId:',self.reqId,'Symbol:',self.pair[self.reqId],'current positions:',self.all_positions.loc[self.pair[self.reqId],'Quantity'],self.signal1[reqId],'Quantity:',self.qty[reqId],'Entry:',self.entryprice[reqId],'SL:',self.sl[reqId])
                                     # if len(self.SLOrderId[reqId])!=0:
                                     #     for j in self.SLOrderId[reqId]:
                                     #         self.cancelOrder(self.SLOrderId[reqId][j])
@@ -423,7 +454,7 @@ class TestApp(EWrapper,EClient):
     
     
     def start(self):
-        bracket = self.BracketOrder(self,self.nextOrderId, self.signal[self.reqId], self.qty[self.reqId], self.entryprice[self.reqId], self.tp[self.reqId], self.sl[self.reqId]) # Order
+        bracket = self.BracketOrder(self,self.nextOrderId, self.signal1[self.reqId], self.qty[self.reqId], self.entryprice[self.reqId], self.tp[self.reqId], self.sl[self.reqId]) # Order
         for o in bracket:
             self.placeOrder(o.orderId, self.OrderContract[self.reqId], o)
             self.nextOrderId # need to advance this we’ll skip one extra oid, it’s fine
@@ -434,7 +465,7 @@ class TestApp(EWrapper,EClient):
         return
     
     def start1(self):
-        bracket = self.BracketOrder1(self,self.nextOrderId, self.signal[self.reqId], self.qty[self.reqId], self.entryprice[self.reqId], self.sl[self.reqId]) # Order
+        bracket = self.BracketOrder1(self,self.nextOrderId, self.signal1[self.reqId], self.qty[self.reqId], self.entryprice[self.reqId], self.sl[self.reqId]) # Order
         for o in bracket:
             self.placeOrder(o.orderId, self.OrderContract[self.reqId], o)
             self.nextOrderId # need to advance this we’ll skip one extra oid, it’s fine
@@ -446,8 +477,8 @@ class TestApp(EWrapper,EClient):
     
     def start2(self):
              
-        # bracket = self.BracketOrder2(self,self.nextOrderId, self.signal[self.reqId], self.qty[self.reqId], self.sl[self.reqId]) # Order
-        bracket = self.BracketOrder2(self,self.nextOrderId, self.signal[self.reqId], self.qty[self.reqId], self.entryprice[self.reqId], self.sl[self.reqId]) # Order
+        # bracket = self.BracketOrder2(self,self.nextOrderId, self.signal1[self.reqId], self.qty[self.reqId], self.sl[self.reqId]) # Order
+        bracket = self.BracketOrder2(self,self.nextOrderId, self.signal1[self.reqId], self.qty[self.reqId], self.entryprice[self.reqId], self.sl[self.reqId]) # Order
 
         for o in bracket:
             self.placeOrder(o.orderId, self.OrderContract[self.reqId], o)
@@ -754,6 +785,7 @@ class TestApp(EWrapper,EClient):
             else:
             
                 self.j=len(self.df1[self.reqId])-1
+                print(self.j)
                 # print(self.trade[self.reqId])
                 self.trade[self.reqId][self.j]={'ID':self.j,
                                 'DateTime':self.df1[self.reqId].loc[self.df1[self.reqId].index[-1],'DateTime'],
