@@ -37,6 +37,7 @@ clear df_tick after resample
 add IBAPI path to default
 K bar time lag：use shioaji method
 trade record disappered :write the trade record to csv:use shioaji tradeRecord csv.read csv：self.trade to_csv and read from csv can continiue previous position.restart the positions and trade：previous position ,Save the trade to csv,and read again,
+add 2 timeframe to filt signal
 -----Finished
 
 -----testing----
@@ -45,8 +46,8 @@ no opentrade
 -----testing----
 
 -----To do
-add 2 timeframe to filt signal
-filter every timeframe
+filter every timeframe:2,3,4
+exit at timeframe 2 or 3 or 4
 change to self.trade and easy restart
 re-read pair and re-reqHistoricalData function.And considerate trade record in csv
 considerate margin availability
@@ -125,6 +126,7 @@ class TestApp(EWrapper,EClient):
         self.direction=[]
         self.direction2={}
         self.direction3={}
+        self.direction4={}
         self.mode=[]
         
         for i in order:
@@ -168,6 +170,7 @@ class TestApp(EWrapper,EClient):
         self.df1={}
         self.df2={} 
         self.df3={} 
+        self.df4={} 
         self.df_tick={} 
         self.df_res={}
         
@@ -206,6 +209,7 @@ class TestApp(EWrapper,EClient):
         self.signal1={} # For placing Bracket Order
         self.signal2={} # For placing Bracket Order
         self.signal3={} # For placing Bracket Order
+        self.signal4={} # For placing Bracket Order
         self.entryprice={}
         self.tp={}
         self.sl={}
@@ -236,14 +240,17 @@ class TestApp(EWrapper,EClient):
             self.df1[pair]=[] # Historical
             self.df2[pair]=[] # Historical
             self.df3[pair]=[] # Historical
+            self.df4[pair]=[] # Historical
             self.df_tick[pair]=[] #Update 
             self.df_res[pair]=[]
             self.position[pair]=0.0
             self.signal1[pair]=False
             self.signal2[pair]=False
             self.signal3[pair]=False
+            self.signal4[pair]=False
             self.direction2[pair]='None'
             self.direction3[pair]='None'
+            self.direction4[pair]='None'
             self.entryprice[pair]=np.nan
             self.tp[pair]=np.nan
             self.sl[pair]=np.nan
@@ -345,7 +352,7 @@ class TestApp(EWrapper,EClient):
                 
                 
                 print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],str(self.timeframe2)+'K Bar:',self.df2[reqId].index[-1].strftime('%F %H:%M'))
-                self.df2[reqId].reset_index(inplace=True) 
+                # self.df2[reqId].reset_index(inplace=True) 
                 # self.df2[reqId].to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/df2_'+str(reqId)+'.csv',index=0 ,float_format='%.5f') 
                 self.signal2[reqId]=self.st._RSI(self.df2[reqId])
                 if self.signal2[reqId] =='BUY':  #進場訊號
@@ -361,20 +368,43 @@ class TestApp(EWrapper,EClient):
                     # print(datetime.fromtimestamp(int(datetime.now().timestamp())),'self.timeframe3',self.timeframe3)
                     # print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.now_date,bar.date,self.now_date/self.timeframe3,self.now_date//self.timeframe3)
                     self.df3[reqId]=self.df1[reqId].set_index('DateTime').resample(str(self.timeframe3)+'min', closed='left', label='left').agg(self.res_dict)
-                    print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],str(self.timeframe3)+'K Bar:',self.df3[reqId].index[-1].strftime('%F %H:%M'))
-                    self.df3[reqId].reset_index(inplace=True) 
+                    
                     self.df3[reqId].dropna(axis=0, how='any', inplace=True)  # 去掉交易時間外的空行
                     self.df3[reqId].reset_index(drop=True)
+                    
+                    print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],str(self.timeframe3)+'K Bar:',self.df3[reqId].index[-1].strftime('%F %H:%M'))
+                    # self.df3[reqId].reset_index(inplace=True) 
                     # self.df3[reqId].to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/df3_'+str(reqId)+'.csv',index=0 ,float_format='%.5f') 
-                    # self.signal3[reqId]=self.st._RSI(self.df3[reqId])
-                    # if self.signal3[reqId] =='BUY':  #進場訊號
-                    #     self.direction3[reqId]='BUY'
-                    #     print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],str(self.timeFrame3)+'m RSI low')
-                    #     # sendTelegram(str(self,timeFrame2)+'m RSI low', token, chatid)
-                    # elif self.signal3[reqId] =='SELL':
-                    #     self.direction3[reqId]='SELL'
-                    #     print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],str(self.timeFrame3)+'m RSI high')
+                    self.signal3[reqId]=self.st._RSI(self.df3[reqId])
+                    if self.signal3[reqId] =='BUY':  #進場訊號
+                        self.direction3[reqId]='BUY'
+                        print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],str(self.timeframe3)+'m RSI low')
+                        # sendTelegram(str(self,timeFrame2)+'m RSI low', token, chatid)
+                    elif self.signal3[reqId] =='SELL':
+                        self.direction3[reqId]='SELL'
+                        print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],str(self.timeframe3)+'m RSI high')
                         # sendTelegram(str(timeFrame2)+'m RSI high', token, chatid) 
+                    
+                    if self.now_date != self.pre_date and self.now_date/(self.timeframe4*60)==self.now_date//(self.timeframe4*60):
+                        # print(datetime.fromtimestamp(int(datetime.now().timestamp())),'self.timeframe4',self.timeframe4)
+                        # print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.now_date,bar.date,self.now_date/self.timeframe4,self.now_date//self.timeframe3)
+                        self.df4[reqId]=self.df1[reqId].set_index('DateTime').resample(str(self.timeframe4)+'min', closed='left', label='left').agg(self.res_dict)
+                        
+                        self.df4[reqId].dropna(axis=0, how='any', inplace=True)  # 去掉交易時間外的空行
+                        self.df4[reqId].reset_index(drop=True)
+                        
+                        print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],str(self.timeframe4)+'K Bar:',self.df4[reqId].index[-1].strftime('%F %H:%M'))
+                        # self.df4[reqId].reset_index(inplace=True) 
+                        # self.df4[reqId].to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/df4_'+str(reqId)+'.csv',index=0 ,float_format='%.5f') 
+                        self.signal4[reqId]=self.st._RSI(self.df4[reqId])
+                        if self.signal4[reqId] =='BUY':  #進場訊號
+                            self.direction4[reqId]='BUY'
+                            print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],str(self.timeframe4)+'m RSI low')
+                            # sendTelegram(str(self,timeframe4)+'m RSI low', token, chatid)
+                        elif self.signal4[reqId] =='SELL':
+                            self.direction4[reqId]='SELL'
+                            print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],str(self.timeframe4)+'m RSI high')
+                            # sendTelegram(str(timeframe4)+'m RSI high', token, chatid) 
             
             if (self.all_positions.loc[self.pair[reqId],'Quantity']==0.0 or (self.all_positions.loc[self.pair[reqId],'Quantity']!=0.0 and self.mode[reqId]=='PYRAMIDING')) and bar.close>self.all_positions.loc[self.pair[reqId],'Average Cost'] and int(datetime.now().timestamp())-self.LastOrderTime[reqId]>5*self.timeframe1*60:
                 
@@ -386,7 +416,8 @@ class TestApp(EWrapper,EClient):
                 # print(self.direction[reqId])
                 # print(self.direction2[reqId])
                 
-                if self.signal1[reqId] == self.direction2[reqId] and self.signal1[reqId] ==self.direction[reqId]: # if entry signal produced and check no position then entry
+                # if self.signal1[reqId] == self.direction2[reqId] and self.signal1[reqId] ==self.direction[reqId]: # if entry signal produced and check no position then entry
+                if self.signal1[reqId] ==self.direction[reqId] and self.signal1[reqId] == self.direction2[reqId] and self.signal1[reqId] == self.direction3[reqId] and self.signal1[reqId] == self.direction4[reqId] : # if entry signal produced and check no position then entry
                     if self.all_positions.loc[self.pair[reqId],'Quantity']==0.0 and self.mode[reqId]=='':
                         
                         self.entryprice[reqId]=round(bar.close,self.info[reqId].get('round'))
