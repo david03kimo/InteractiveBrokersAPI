@@ -38,6 +38,7 @@ add IBAPI path to default
 K bar time lag：use shioaji method
 trade record disappered :write the trade record to csv:use shioaji tradeRecord csv.read csv：self.trade to_csv and read from csv can continiue previous position.restart the positions and trade：previous position ,Save the trade to csv,and read again,
 add 2 timeframe to filt signal
+filter every timeframe:2,3,4
 -----Finished
 
 -----testing----
@@ -46,7 +47,7 @@ no opentrade
 -----testing----
 
 -----To do
-filter every timeframe:2,3,4
+df collum add direction
 exit at timeframe 2 or 3 or 4
 alert at 2,3,4 TF ready to support manual trading:for screen stocks.
 change to self.trade and easy restart
@@ -128,6 +129,11 @@ class TestApp(EWrapper,EClient):
         self.direction2={}
         self.direction3={}
         self.direction4={}
+        self.direction5={}
+        self.direction2_pre={}
+        self.direction3_pre={}
+        self.direction4_pre={}
+        self.direction5_pre={}
         self.mode=[]
         
         for i in order:
@@ -157,6 +163,7 @@ class TestApp(EWrapper,EClient):
         self.timeframe2=int(config.get('MM','timeframe2'))
         self.timeframe3=int(config.get('MM','timeframe3'))
         self.timeframe4=int(config.get('MM','timeframe4'))
+        self.timeframe5=int(config.get('MM','timeframe5'))
         
         # basic setup
         self.StrategyType='API'  # 告訴策略用API方式來處理訊號
@@ -173,6 +180,7 @@ class TestApp(EWrapper,EClient):
         self.df2={} 
         self.df3={} 
         self.df4={} 
+        self.df5={} 
         self.df_tick={} 
         self.df_res={}
         
@@ -208,10 +216,11 @@ class TestApp(EWrapper,EClient):
         self.isBusy=False
         
         # Order control
-        self.signal1={} # For placing Bracket Order
-        self.signal2={} # For placing Bracket Order
-        self.signal3={} # For placing Bracket Order
-        self.signal4={} # For placing Bracket Order
+        self.signal1={} 
+        self.signal2={} 
+        self.signal3={} 
+        self.signal4={} 
+        self.signal5={} 
         self.entryprice={}
         self.tp={}
         self.sl={}
@@ -243,6 +252,7 @@ class TestApp(EWrapper,EClient):
             self.df2[pair]=[] # Historical
             self.df3[pair]=[] # Historical
             self.df4[pair]=[] # Historical
+            self.df5[pair]=[] # Historical
             self.df_tick[pair]=[] #Update 
             self.df_res[pair]=[]
             self.position[pair]=0.0
@@ -250,9 +260,15 @@ class TestApp(EWrapper,EClient):
             self.signal2[pair]=False
             self.signal3[pair]=False
             self.signal4[pair]=False
+            self.signal5[pair]=False
             self.direction2[pair]='None'
             self.direction3[pair]='None'
             self.direction4[pair]='None'
+            self.direction5[pair]='None'
+            self.direction2_pre[pair]='None'
+            self.direction3_pre[pair]='None'
+            self.direction4_pre[pair]='None'
+            self.direction5_pre[pair]='None'
             self.entryprice[pair]=np.nan
             self.tp[pair]=np.nan
             self.sl[pair]=np.nan
@@ -303,6 +319,41 @@ class TestApp(EWrapper,EClient):
         #     return
         self.reqContractDetails(reqId, self.OrderContract[reqId])
         # print(datetime.fromtimestamp(int(datetime.now().timestamp())),'Conversion Rate:',self.ConversionRate)
+        
+        
+        # check the direction of higher time frame
+        self.df1[reqId].DateTime = pd.to_datetime(self.df1[reqId].DateTime)
+        self.df1[reqId].index = self.df1[reqId].DateTime
+        self.df2[reqId] = self.df1[reqId].resample(str(self.timeframe2)+'min', closed='left',label='left').agg(self.res_dict)  
+        # self.df2[reqId].reset_index(inplace=True)
+        self.df3[reqId] = self.df1[reqId].resample(str(self.timeframe3)+'min', closed='left',label='left').agg(self.res_dict)  
+        # self.df3[reqId].reset_index(inplace=True)
+        self.df4[reqId] = self.df1[reqId].resample(str(self.timeframe4)+'min', closed='left',label='left').agg(self.res_dict)  
+        self.df5[reqId] = self.df1[reqId].resample(str(self.timeframe5)+'min', closed='left',label='left').agg(self.res_dict)  
+        # self.df4[reqId].reset_index(inplace=True)
+        
+        self.df1[reqId].dropna(axis=0, how='any', inplace=True)  
+        self.df1[reqId].reset_index(drop=True)   
+        self.df2[reqId].dropna(axis=0, how='any', inplace=True)  
+        self.df2[reqId].reset_index(drop=True)   
+        self.df3[reqId].dropna(axis=0, how='any', inplace=True)  
+        self.df3[reqId].reset_index(drop=True)   
+        self.df4[reqId].dropna(axis=0, how='any', inplace=True)  
+        self.df4[reqId].reset_index(drop=True)   
+        self.df5[reqId].dropna(axis=0, how='any', inplace=True)  
+        self.df5[reqId].reset_index(drop=True)   
+           
+        
+        self.direction2[reqId]=self.st._RSI_HTF(reqId,self.df2[reqId],self.timeframe2)
+        self.direction3[reqId]=self.st._RSI_HTF(reqId,self.df3[reqId],self.timeframe3)
+        self.direction4[reqId]=self.st._RSI_HTF(reqId,self.df4[reqId],self.timeframe4)
+        self.direction5[reqId]=self.st._RSI_HTF(reqId,self.df5[reqId],self.timeframe5)
+        self.direction2_pre[reqId]=self.direction2[reqId]
+        self.direction3_pre[reqId]=self.direction3[reqId]
+        self.direction4_pre[reqId]=self.direction4[reqId]
+        self.direction5_pre[reqId]=self.direction5[reqId]
+        print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],self.timeframe2,self.direction2[reqId],self.timeframe3,self.direction3[reqId],self.timeframe4,self.direction4[reqId],self.timeframe5,self.direction5[reqId])
+
         return
 
     def historicalDataUpdate(self, reqId: int, bar):
@@ -355,16 +406,24 @@ class TestApp(EWrapper,EClient):
                 self.df2[reqId].reset_index(drop=True)
                 
                 
+                self.direction2[reqId]=self.st._RSI_HTF(reqId,self.df2[reqId],self.timeframe2)
+                if self.direction2_pre[reqId]!=self.direction2[reqId]:
+                    print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],str(self.timeframe5),'changes',self.timeframe2,self.direction2[reqId],self.timeframe3,self.direction3[reqId],self.timeframe4,self.direction4[reqId],self.timeframe5,self.direction5[reqId])
+                    self.direction2_pre[reqId]=self.direction2[reqId]
+                    if self.direction[reqId]==self.direction2[reqId] and self.direction2[reqId]==self.direction3[reqId] and self.direction3[reqId]==self.direction4[reqId] and self.direction4[reqId]==self.direction5[reqId]:
+                        print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],'all direction:',self.direction[reqId])
+                        send(self.pair[reqId]+' all direction: '+self.direction[reqId],token,chatid)
+                
                 # print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],str(self.timeframe2)+'K Bar:',self.df2[reqId].index[-1].strftime('%F %H:%M'))
                 # self.df2[reqId].reset_index(inplace=True) 
                 # self.df2[reqId].to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/df2_'+str(reqId)+'.csv',index=0 ,float_format='%.5f') 
-                self.signal2[reqId]=self.st._RSI(self.df2[reqId])
-                if self.signal2[reqId] =='BUY':  #進場訊號
-                    self.direction2[reqId]='BUY'
+                # self.signal2[reqId]=self.st._RSI(self.df2[reqId])
+                # if self.signal2[reqId] =='BUY':  #進場訊號
+                    # self.direction2[reqId]='BUY'
                     # print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],str(self.timeframe2)+'m direction BUY')
                     # sendTelegram(str(self,timeFrame2)+'m RSI low', token, chatid)
-                elif self.signal2[reqId] =='SELL':
-                    self.direction2[reqId]='SELL'
+                # elif self.signal2[reqId] =='SELL':
+                    # self.direction2[reqId]='SELL'
                     # print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],str(self.timeframe2)+'m direction SELL')
                     # sendTelegram(str(timeFrame2)+'m RSI high', token, chatid) 
                 
@@ -376,16 +435,23 @@ class TestApp(EWrapper,EClient):
                     self.df3[reqId].dropna(axis=0, how='any', inplace=True)  # 去掉交易時間外的空行
                     self.df3[reqId].reset_index(drop=True)
                     
+                    self.direction3[reqId]=self.st._RSI_HTF(reqId,self.df3[reqId],self.timeframe3)
+                    if self.direction3_pre[reqId]!=self.direction3[reqId]:
+                        print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],str(self.timeframe5),'changes',self.timeframe2,self.direction2[reqId],self.timeframe3,self.direction3[reqId],self.timeframe4,self.direction4[reqId],self.timeframe5,self.direction5[reqId])
+                        self.direction3_pre[reqId]=self.direction3[reqId]
+                        if self.direction[reqId]==self.direction2[reqId] and self.direction2[reqId]==self.direction3[reqId] and self.direction3[reqId]==self.direction4[reqId] and self.direction4[reqId]==self.direction5[reqId]:
+                            print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],'all direction:',self.direction[reqId])
+                            send(self.pair[reqId]+' all direction: '+self.direction[reqId],token,chatid)
                     # print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],str(self.timeframe3)+'K Bar:',self.df3[reqId].index[-1].strftime('%F %H:%M'))
                     # self.df3[reqId].reset_index(inplace=True) 
                     # self.df3[reqId].to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/df3_'+str(reqId)+'.csv',index=0 ,float_format='%.5f') 
-                    self.signal3[reqId]=self.st._RSI(self.df3[reqId])
-                    if self.signal3[reqId] =='BUY':  #進場訊號
-                        self.direction3[reqId]='BUY'
+                    # self.signal3[reqId]=self.st._RSI(self.df3[reqId])
+                    # if self.signal3[reqId] =='BUY':  #進場訊號
+                        # self.direction3[reqId]='BUY'
                         # print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],str(self.timeframe3)+'m direction BUY')
                         # sendTelegram(str(self,timeFrame2)+'m RSI low', token, chatid)
-                    elif self.signal3[reqId] =='SELL':
-                        self.direction3[reqId]='SELL'
+                    # elif self.signal3[reqId] =='SELL':
+                        # self.direction3[reqId]='SELL'
                         # print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],str(self.timeframe3)+'m direction SELL')
                         # sendTelegram(str(timeFrame2)+'m RSI high', token, chatid) 
                     
@@ -394,25 +460,43 @@ class TestApp(EWrapper,EClient):
                         # print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.now_date,bar.date,self.now_date/self.timeframe4,self.now_date//self.timeframe3)
                         self.df4[reqId]=self.df1[reqId].set_index('DateTime').resample(str(self.timeframe4)+'min', closed='left', label='left').agg(self.res_dict)
                         
-                        self.df4[reqId].dropna(axis=0, how='any', inplace=True)  # 去掉交易時間外的空行
+                        self.df4[reqId].dropna(axis=0, how='any', inplace=True)
                         self.df4[reqId].reset_index(drop=True)
+                        
+                        self.direction4[reqId]=self.st._RSI_HTF(reqId,self.df4[reqId],self.timeframe4)
+                        if self.direction4_pre[reqId]!=self.direction4[reqId]:
+                            print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],str(self.timeframe5),'changes',self.timeframe2,self.direction2[reqId],self.timeframe3,self.direction3[reqId],self.timeframe4,self.direction4[reqId],self.timeframe5,self.direction5[reqId])
+                            self.direction4_pre[reqId]=self.direction4[reqId]
+                            if self.direction[reqId]==self.direction2[reqId] and self.direction2[reqId]==self.direction3[reqId] and self.direction3[reqId]==self.direction4[reqId] and self.direction4[reqId]==self.direction5[reqId]:
+                                print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],'all direction:',self.direction[reqId])
+                                send(self.pair[reqId]+' all direction: '+self.direction[reqId],token,chatid)
                         
                         # print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],str(self.timeframe4)+'K Bar:',self.df4[reqId].index[-1].strftime('%F %H:%M'))
                         # self.df4[reqId].reset_index(inplace=True) 
                         # self.df4[reqId].to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/df4_'+str(reqId)+'.csv',index=0 ,float_format='%.5f') 
-                        self.signal4[reqId]=self.st._RSI(self.df4[reqId])
-                        if self.signal4[reqId] =='BUY':  #進場訊號
-                            self.direction4[reqId]='BUY'
+                        # self.signal4[reqId]=self.st._RSI(self.df4[reqId])
+                        # if self.signal4[reqId] =='BUY':  #進場訊號
+                            # self.direction4[reqId]='BUY'
                             # print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],str(self.timeframe4)+'m direction BUY')
                             # sendTelegram(str(self,timeframe4)+'m RSI low', token, chatid)
-                        elif self.signal4[reqId] =='SELL':
-                            self.direction4[reqId]='SELL'
+                        # elif self.signal4[reqId] =='SELL':
+                            # self.direction4[reqId]='SELL'
                             # print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],str(self.timeframe4)+'m direction SELL')
                             # sendTelegram(str(timeframe4)+'m RSI high', token, chatid) 
                             
-            if self.direction[reqId]==self.direction2[reqId] and self.direction2[reqId]==self.direction3 and self.direction3[reqId]==self.direction4:
-                print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],'all direction:',self.direction2[reqId])
-                send(self.pair[reqId]+' all direction: '+self.direction2[reqId],token,chatid)
+                        if self.now_date != self.pre_date and self.now_date/(self.timeframe5*60)==self.now_date//(self.timeframe5*60):
+                            self.df5[reqId]=self.df1[reqId].set_index('DateTime').resample(str(self.timeframe5)+'min', closed='left', label='left').agg(self.res_dict)
+                        
+                            self.df5[reqId].dropna(axis=0, how='any', inplace=True)  # 去掉交易時間外的空行
+                            self.df5[reqId].reset_index(drop=True)
+                        
+                            self.direction5[reqId]=self.st._RSI_HTF(reqId,self.df5[reqId],self.timeframe5)
+                            if self.direction5_pre[reqId]!=self.direction5[reqId]:
+                                print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],str(self.timeframe5),'changes',self.timeframe2,self.direction2[reqId],self.timeframe3,self.direction3[reqId],self.timeframe4,self.direction4[reqId],self.timeframe5,self.direction5[reqId])
+                                self.direction5_pre[reqId]=self.direction5[reqId]
+                                if self.direction[reqId]==self.direction2[reqId] and self.direction2[reqId]==self.direction3[reqId] and self.direction3[reqId]==self.direction4[reqId] and self.direction4[reqId]==self.direction5[reqId]:
+                                    print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],'all direction:',self.direction[reqId])
+                                    send(self.pair[reqId]+' all direction: '+self.direction[reqId],token,chatid)
             
             if (self.all_positions.loc[self.pair[reqId],'Quantity']==0.0 or (self.all_positions.loc[self.pair[reqId],'Quantity']!=0.0 and self.mode[reqId]=='PYRAMIDING')) and bar.close>self.all_positions.loc[self.pair[reqId],'Average Cost'] and int(datetime.now().timestamp())-self.LastOrderTime[reqId]>5*self.timeframe1*60:
                 
@@ -824,7 +908,7 @@ class TestApp(EWrapper,EClient):
             else:
             
                 self.j=len(self.df1[self.reqId])-1
-                print(self.j)
+                # print(self.j)
                 # print(self.trade[self.reqId])
                 self.trade[self.reqId][self.j]={'ID':self.j,
                                 'DateTime':self.df1[self.reqId].loc[self.df1[self.reqId].index[-1],'DateTime'],
