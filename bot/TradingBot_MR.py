@@ -38,7 +38,8 @@ add IBAPI path to default
 K bar time lag：use shioaji method
 trade record disappered :write the trade record to csv:use shioaji tradeRecord csv.read csv：self.trade to_csv and read from csv can continiue previous position.restart the positions and trade：previous position ,Save the trade to csv,and read again,
 add 2 timeframe to filt signal
-filter every timeframe:2,3,4
+filter every timeframe:2,3,4,5
+df collum add direction
 -----Finished
 
 -----testing----
@@ -47,13 +48,11 @@ no opentrade
 -----testing----
 
 -----To do
-df collum add direction
-exit at timeframe 2 or 3 or 4
-alert at 2,3,4 TF ready to support manual trading:for screen stocks.
-change to self.trade and easy restart
-re-read pair and re-reqHistoricalData function.And considerate trade record in csv
+change self.trade and self.opentrade to df to csv and easy restart
+re-read pair and re-reqHistoricalData function
 considerate margin availability
 hang cannot restart,use quqe,check ram and cpu，unlimit isBusy，que
+exit at timeframe 2 or 3 or 4
 report open order of SL to check：auto add SL to positions without SL order
 xagusd error
 market close,open time,don't need to data lag and restart
@@ -73,6 +72,7 @@ OCA,condition order
 if SL didn't execute
 change UI:tradingview sent:'signal':buy/pyramiding,'symbol'into self.pair and historicalupdate.pair=0,if signal pair+=1.self.OrderContract[pair].schedulely re-read csv or tradingview,if new order,add symbol dict to run.
 stocks CFD/options trading:need to subscribe market data streaming 
+alert at 2,3,4,5 TF ready to support manual trading:for screen stocks and stock options.
 
 '''
 from ibapi.client import EClient
@@ -205,6 +205,8 @@ class TestApp(EWrapper,EClient):
         self.Index_currency={'IBUS500':'USD','IBUS30':'USD','IBUST100':'USD','IBGB100':'GBP','IBEU50':'EUR','IBDE30':'EUR','IBFR40':'EUR','IBES35':'EUR',
                              'IBNL25':'EUR','IBCH20':'CHF','IBJP225':'JPY','IBHK50':'HKD','IBAU200':'AUD'}
         self.Metal_cfd=['XAUUSD','XAGUSD']
+        
+        self.USStock_cfd=['DVN','EWZ','SLV']
         
         # Time control
         self.now_date=np.nan
@@ -622,6 +624,9 @@ class TestApp(EWrapper,EClient):
         elif self.pair[pair] in self.Metal_cfd:
             self.QuoteContract[pair]=self.metalCFD(self.pair[pair])
             self.OrderContract[pair]=self.metalCFD(self.pair[pair])
+        elif self.pair[pair] in self.USStock_cfd:
+            self.QuoteContract[pair]=self.USStockAtSmart(self.pair[pair])
+            self.OrderContract[pair]=self.USStockCFD(self.pair[pair])
         else:
             print(self.pair[pair])
             input('Wrong Symbol!!!')
@@ -710,6 +715,26 @@ class TestApp(EWrapper,EClient):
         contract.exchange = "SMART"
         # ! [usstockcfd_conract]
         return contract
+    
+    def EuropeanStock():
+        contract = Contract()
+        contract.symbol = "BMW"
+        contract.secType = "STK"
+        contract.currency = "EUR"
+        contract.exchange = "SMART"
+        contract.primaryExchange = "IBIS"
+        return contract
+
+    
+    def EuropeanStock2():
+        contract = Contract()
+        contract.symbol = "NOKIA"
+        contract.secType = "STK"
+        contract.currency = "EUR"
+        contract.exchange = "SMART"
+        contract.primaryExchange = "HEX"
+        return contract
+    
     
     def EuropeanStockCFD(self,symbol):
         # ! [europeanstockcfd_contract]
