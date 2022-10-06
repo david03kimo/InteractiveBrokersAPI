@@ -40,12 +40,12 @@ trade record disappered :write the trade record to csv:use shioaji tradeRecord c
 add 2 timeframe to filt signal
 filter every timeframe:2,3,4,5
 df collum add direction
+check all TFs missed direction of dataframe
 -----Finished
 
 -----testing----
 2nd time signal entry,scale-in,modify order: trade:'last_price':if open_trade didn't work
 no opentrade
-check all TFs direction of dataframe
 -----testing----
 
 -----To do
@@ -202,23 +202,31 @@ class TestApp(EWrapper,EClient):
                      'USDCAD','USDCHF','USDJPY','USDRUB','USDSEK','USDHUF','USDCNH','USDCZK','USDDKK','USDHKD','USDMXN','USDNOK','USDPLN',
                      'USDSGD','USDILS','USDZAR','ZARJPY','GBPSEK'
                      ]
+        
         self.Index_cfd=['IBUS500','IBUS30','IBUST100','IBGB100','IBEU50','IBDE30','IBFR40','IBES35','IBNL25','IBCH20','IBJP225','IBHK50','IBAU200']
         self.Index_currency={'IBUS500':'USD','IBUS30':'USD','IBUST100':'USD','IBGB100':'GBP','IBEU50':'EUR','IBDE30':'EUR','IBFR40':'EUR','IBES35':'EUR',
                              'IBNL25':'EUR','IBCH20':'CHF','IBJP225':'JPY','IBHK50':'HKD','IBAU200':'AUD'}
+        
         self.Metal_cfd=['XAUUSD','XAGUSD']
+        
+        self.LSEStock_cfd=['WISE','FRES','BA.','VIC','FAN','AEX','JOG','SAR','IMB','KINO','TRLS','TEP','BRBY','SGLN','AVV','PHGP','PSON','NETW','ESNT']
+        
+        self.TSXStock_cfd=['DOL','HGU','RY','MFC','CNQ','SU','XEG','GLO','ARX','ATH','BTE','MEG','TOI']
+        
+        self.HK_Future=['MHI','MCH.HK','HHI.HK','1898','9633','2823']
+        
+        
+        # ------------------
         
         self.USStock_cfd=['DVN','EWZ','SLV']
         
         self.AUStock_cfd=['AGY','WHC','BRN','MIN','IGO','PLS']
         
+        self.Mutual_Fund=['VENAX','VGELX','VGENX']
         
-        self.LSEStock_cfd=['WISE','FRES','BA.']
+        self.Future=['YC','YK','YW','M6B','MYM','MNQ','MGC','YI']
         
-        self.TSXStock_cfd=['DOL','HGU','RY','MFC','CNQ','SU','XEG','GLO','ARX','ATH','BTE','MEG','TOI']
         
-        self.Mutual_Fund=['VDE']
-        
-        self.Future=['YC','YK','YW']
         
         
         # Time control
@@ -411,7 +419,7 @@ class TestApp(EWrapper,EClient):
             self.df1[reqId]=pd.concat([self.df1[reqId], self.df_res[reqId]],ignore_index=True)
             
             # if self.pair[reqId] in self.LSEStock_cfd:
-                # self.df1[reqId].to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/df1_'+str(reqId)+'.csv',index=0 ,float_format='%.5f') 
+            # self.df1[reqId].to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/df1_'+str(reqId)+'.csv',index=0 ,float_format='%.5f') 
             
             # print('type of df_tick:',type(self.df_tick))
             
@@ -431,7 +439,7 @@ class TestApp(EWrapper,EClient):
                 if self.direction2_pre[reqId]!=self.direction2[reqId]:
                     self.all_timeframe.loc[self.pair[reqId]]=self.pair[reqId],self.direction2[reqId],self.direction3[reqId],self.direction4[reqId],self.direction5[reqId]
                     self.all_timeframe.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_timeframe.csv',index=0)
-                    print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],'['+self.timeframe2+']',self.direction2[reqId],self.timeframe3,self.direction3[reqId],self.timeframe4,self.direction4[reqId],self.timeframe5,self.direction5[reqId])
+                    print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],'['+str(self.timeframe2)+']',self.direction2[reqId],self.timeframe3,self.direction3[reqId],self.timeframe4,self.direction4[reqId],self.timeframe5,self.direction5[reqId])
                     self.direction2_pre[reqId]=self.direction2[reqId]
                     if self.direction[reqId]==self.direction2[reqId] and self.direction2[reqId]==self.direction3[reqId] and self.direction3[reqId]==self.direction4[reqId] and self.direction4[reqId]==self.direction5[reqId]:
                         print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],'all direction:',self.direction[reqId])
@@ -462,7 +470,7 @@ class TestApp(EWrapper,EClient):
                     if self.direction3_pre[reqId]!=self.direction3[reqId]:
                         self.all_timeframe.loc[self.pair[reqId]]=self.pair[reqId],self.direction2[reqId],self.direction3[reqId],self.direction4[reqId],self.direction5[reqId]
                         self.all_timeframe.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_timeframe.csv',index=0)
-                        print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],self.timeframe2,self.direction2[reqId],'['+self.timeframe3+']',self.direction3[reqId],self.timeframe4,self.direction4[reqId],self.timeframe5,self.direction5[reqId])
+                        print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],self.timeframe2,self.direction2[reqId],'['+str(self.timeframe3)+']',self.direction3[reqId],self.timeframe4,self.direction4[reqId],self.timeframe5,self.direction5[reqId])
                         self.direction3_pre[reqId]=self.direction3[reqId]
                         if self.direction[reqId]==self.direction2[reqId] and self.direction2[reqId]==self.direction3[reqId] and self.direction3[reqId]==self.direction4[reqId] and self.direction4[reqId]==self.direction5[reqId]:
                             print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],'all direction:',self.direction[reqId])
@@ -492,7 +500,7 @@ class TestApp(EWrapper,EClient):
                         if self.direction4_pre[reqId]!=self.direction4[reqId]:
                             self.all_timeframe.loc[self.pair[reqId]]=self.pair[reqId],self.direction2[reqId],self.direction3[reqId],self.direction4[reqId],self.direction5[reqId]
                             self.all_timeframe.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_timeframe.csv',index=0)
-                            print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],self.timeframe2,self.direction2[reqId],self.timeframe3,self.direction3[reqId],'['+self.timeframe4+']',self.direction4[reqId],self.timeframe5,self.direction5[reqId])
+                            print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],self.timeframe2,self.direction2[reqId],self.timeframe3,self.direction3[reqId],'['+str(self.timeframe4)+']',self.direction4[reqId],self.timeframe5,self.direction5[reqId])
                             self.direction4_pre[reqId]=self.direction4[reqId]
                             if self.direction[reqId]==self.direction2[reqId] and self.direction2[reqId]==self.direction3[reqId] and self.direction3[reqId]==self.direction4[reqId] and self.direction4[reqId]==self.direction5[reqId]:
                                 print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],'all direction:',self.direction[reqId])
@@ -521,7 +529,7 @@ class TestApp(EWrapper,EClient):
                             if self.direction5_pre[reqId]!=self.direction5[reqId]:
                                 self.all_timeframe.loc[self.pair[reqId]]=self.pair[reqId],self.direction2[reqId],self.direction3[reqId],self.direction4[reqId],self.direction5[reqId]
                                 self.all_timeframe.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_timeframe.csv',index=0)
-                                print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],self.timeframe2,self.direction2[reqId],self.timeframe3,self.direction3[reqId],self.timeframe4,self.direction4[reqId],'['+self.timeframe5+']',self.direction5[reqId])
+                                print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],self.timeframe2,self.direction2[reqId],self.timeframe3,self.direction3[reqId],self.timeframe4,self.direction4[reqId],'['+str(self.timeframe5)+']',self.direction5[reqId])
                                 self.direction5_pre[reqId]=self.direction5[reqId]
                                 if self.direction[reqId]==self.direction2[reqId] and self.direction2[reqId]==self.direction3[reqId] and self.direction3[reqId]==self.direction4[reqId] and self.direction4[reqId]==self.direction5[reqId]:
                                     print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],'all direction:',self.direction[reqId])
@@ -671,16 +679,23 @@ class TestApp(EWrapper,EClient):
             # self.QuoteContract[pair]=self.AustraliaStock(self.pair[pair])
             self.QuoteContract[pair]=self.TSXStock(self.pair[pair])
             self.OrderContract[pair]=self.TSXStockCFD(self.pair[pair])
-        
+            
+        elif self.pair[pair] in self.HK_Future:
+            # self.QuoteContract[pair]=self.AustraliaStock(self.pair[pair])
+            self.QuoteContract[pair]=self.HKFuture(self.pair[pair])
+            self.OrderContract[pair]=self.HKFuture(self.pair[pair])
+        # ----------------------------------------------------------
         elif self.pair[pair] in self.Mutual_Fund:
             # self.QuoteContract[pair]=self.AustraliaStock(self.pair[pair])
             self.QuoteContract[pair]=self.MutualFund(self.pair[pair])
             self.OrderContract[pair]=self.MutualFund(self.pair[pair])
         
-        elif self.pair[pair] in self.future:
+        elif self.pair[pair] in self.Future:
             # self.QuoteContract[pair]=self.AustraliaStock(self.pair[pair])
             self.QuoteContract[pair]=self.SimpleFuture(self.pair[pair])
             self.OrderContract[pair]=self.SimpleFuture(self.pair[pair])
+        
+        
         
         else:
             print(self.pair[pair])
@@ -867,6 +882,7 @@ class TestApp(EWrapper,EClient):
         contract.symbol = symbol
         contract.secType = "FUND"
         contract.exchange = "FUNDSERV"
+        # contract.exchange = "SMART"
         contract.currency = "USD"
         #! [fundcontract]
         return contract
@@ -876,10 +892,22 @@ class TestApp(EWrapper,EClient):
         contract = Contract()
         contract.symbol = symbol
         contract.secType = "FUT"
-        # contract.exchange = "GLOBEX"
-        contract.exchange = "ECBOT"
+        contract.exchange = "GLOBEX"
+        # contract.exchange = "ECBOT"
         contract.currency = "USD"
         contract.lastTradeDateOrContractMonth = "202212"
+        #! [futcontract]
+        return contract
+    
+    def HKFuture(self,symbol):
+        #! [futcontract]
+        contract = Contract()
+        contract.symbol = symbol
+        contract.secType = "FUT"
+        contract.exchange = "HKFE"
+        # contract.exchange = "ECBOT"
+        contract.currency = "HKD"
+        contract.lastTradeDateOrContractMonth = "202210"
         #! [futcontract]
         return contract
     
