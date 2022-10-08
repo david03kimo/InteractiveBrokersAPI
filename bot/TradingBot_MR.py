@@ -211,7 +211,7 @@ class TestApp(EWrapper,EClient):
         
         self.LSEStock_cfd=['WISE','FRES','BA.','VIC','FAN','AEX','JOG','SAR','IMB','KINO','TRLS','TEP','BRBY','SGLN','AVV','PHGP','PSON','NETW','ESNT']
         
-        self.TSXStock_cfd=['DOL','HGU','RY','MFC','CNQ','SU','XEG','GLO','ARX','ATH','BTE','MEG','TOI']
+        self.TSXStock_cfd=['DOL','HGU','RY','MFC','CNQ','SU','XEG','GLO','ARX','ATH','BTE','MEG','TOI','AYA','FRU','FR','ATD','L','VET','AQI','CSU']
         
         self.HK_Future=['MHI','MCH.HK','HHI.HK','1898','9633','2823']
         
@@ -379,7 +379,7 @@ class TestApp(EWrapper,EClient):
         self.direction5_pre[reqId]=self.direction5[reqId]
         self.all_timeframe.loc[self.pair[reqId]]=self.pair[reqId],self.direction2[reqId],self.direction3[reqId],self.direction4[reqId],self.direction5[reqId]
         self.all_timeframe.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_timeframe.csv',index=0)
-        print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],self.timeframe2,self.direction2[reqId],self.timeframe3,self.direction3[reqId],self.timeframe4,self.direction4[reqId],self.timeframe5,self.direction5[reqId])
+        # print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],self.timeframe2,self.direction2[reqId],self.timeframe3,self.direction3[reqId],self.timeframe4,self.direction4[reqId],self.timeframe5,self.direction5[reqId])
 
         return
 
@@ -678,7 +678,7 @@ class TestApp(EWrapper,EClient):
         elif self.pair[pair] in self.TSXStock_cfd:
             # self.QuoteContract[pair]=self.AustraliaStock(self.pair[pair])
             self.QuoteContract[pair]=self.TSXStock(self.pair[pair])
-            self.OrderContract[pair]=self.TSXStockCFD(self.pair[pair])
+            self.OrderContract[pair]=self.TSXStock(self.pair[pair])
             
         elif self.pair[pair] in self.HK_Future:
             # self.QuoteContract[pair]=self.AustraliaStock(self.pair[pair])
@@ -694,8 +694,6 @@ class TestApp(EWrapper,EClient):
             # self.QuoteContract[pair]=self.AustraliaStock(self.pair[pair])
             self.QuoteContract[pair]=self.SimpleFuture(self.pair[pair])
             self.OrderContract[pair]=self.SimpleFuture(self.pair[pair])
-        
-        
         
         else:
             print(self.pair[pair])
@@ -909,6 +907,15 @@ class TestApp(EWrapper,EClient):
         contract.currency = "HKD"
         contract.lastTradeDateOrContractMonth = "202210"
         #! [futcontract]
+        return contract
+    
+    def ContFut():
+        #! [continuousfuturescontract]
+        contract = Contract()
+        contract.symbol = "ES"
+        contract.secType = "CONTFUT"
+        contract.exchange = "GLOBEX"
+        #! [continuousfuturescontract]
         return contract
     
     def xxxUSD(self,symbol):
