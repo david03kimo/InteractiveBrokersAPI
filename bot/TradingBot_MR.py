@@ -46,7 +46,9 @@ check all TFs missed direction of dataframe
 -----testing----
 2nd time signal entry,scale-in,modify order: trade:'last_price':if open_trade didn't work
 no opentrade
-same_direction not fit chart
+same_direction not fit chart:api timestamp local timezone:same_direction doesn't delete old.
+
+indecies all gone.
 -----testing----
 
 -----To do
@@ -98,7 +100,6 @@ import configparser
 import json
 import os
 
-
 # multi-level dict transformation
 def dictTransform(trade):
     dict={}
@@ -121,7 +122,7 @@ class TestApp(EWrapper,EClient):
         EClient.__init__(self,self)
         
         # read orders
-        df_order=pd.read_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/Orders.csv')
+        df_order=pd.read_csv('/Users/apple/Documents/code/Python/IB-native-API/Settings/Orders.csv')
         df_order=df_order.values.tolist()
         order=[]
         for i in range(len(df_order)):
@@ -159,7 +160,7 @@ class TestApp(EWrapper,EClient):
         
         # read config 
         config=configparser.ConfigParser()
-        config.read('/Users/apple/Documents/code/Python/IB-native-API/Output/config.cfg')
+        config.read('/Users/apple/Documents/code/Python/IB-native-API/Settings/config.cfg')
         self.BetAmout=float(config.get('MM','BetAmout'))
         self.rr=float(config.get('MM','rr'))
         self.timeframe1=int(config.get('MM','timeframe1'))
@@ -320,8 +321,8 @@ class TestApp(EWrapper,EClient):
 
     def error(self,reqId,errorCode,errorString):
         
-        if errorCode==2104 or errorCode==2106 or errorCode==2158 or errorCode==300:
-            return
+        # if errorCode==2104 or errorCode==2106 or errorCode==2158 or errorCode==300:
+        #     return
             
             
         print(datetime.fromtimestamp(int(datetime.now().timestamp())),'Error: ',reqId,' ',errorCode,' ',errorString)   
@@ -390,17 +391,25 @@ class TestApp(EWrapper,EClient):
 
         # save the same direction of all time frames
         # condition=(self.all_timeframes[str(self.timeframe2)]==self.direction[reqId])&(self.all_timeframes[str(self.timeframe3)]==self.direction[reqId])&(self.all_timeframes[str(self.timeframe4)]==self.direction[reqId])&(self.all_timeframes[str(self.timeframe5)]==self.direction[reqId])
-        condition=(self.all_timeframes[str(self.timeframe2)]==self.direction[reqId])&(self.all_timeframes[str(self.timeframe3)]==self.direction[reqId])&(self.all_timeframes[str(self.timeframe4)]==self.direction[reqId])
-        # self.same_direction=self.all_timeframes[condition]
-        self.same_direction = pd.concat([self.same_direction, self.all_timeframes[condition]], ignore_index=True) 
-        self.same_direction=self.same_direction.drop_duplicates()
+        # condition=(self.all_timeframes[str(self.timeframe2)]==self.direction[reqId])&(self.all_timeframes[str(self.timeframe3)]==self.direction[reqId])&(self.all_timeframes[str(self.timeframe4)]==self.direction[reqId])
+        # self.same_direction = pd.concat([self.same_direction, self.all_timeframes[condition]], ignore_index=True) 
+        # self.same_direction=self.same_direction.drop_duplicates(keep='last')
+        # self.same_direction.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_same_direction.csv',index=0)
+        
+        self.same_direction.drop(self.same_direction.index,inplace=True)
+        for pair in range(len(self.pair)):
+            if self.direction[pair]==self.direction2[pair]==self.direction3[pair]==self.direction4[pair]:
+                self.same_direction.loc[self.pair[pair]]=self.pair[pair],self.direction2[pair],self.direction3[pair],self.direction4[pair],self.direction5[pair]
+        
         self.same_direction.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_same_direction.csv',index=0)
+                
+        
+        
         return
 
     def historicalDataUpdate(self, reqId: int, bar):
         self.data1[reqId].append([bar.date,bar.open,bar.high,bar.low,bar.close,bar.volume])
         self.LastReceivedDataTime=int(datetime.now().timestamp())
-        
         self.pre_date=self.now_date #Calculate the bar.date and previous bar.date
         self.now_date=int(bar.date)
         
@@ -416,6 +425,11 @@ class TestApp(EWrapper,EClient):
         if self.now_date != self.pre_date : #Resample once after the bar closed
             self.df_tick[reqId] = pd.DataFrame(self.data1[reqId],columns=['DateTime','Open','High','Low', 'Close','Volume'])
             self.df_tick[reqId]['DateTime'] = pd.to_datetime(self.df_tick[reqId]['DateTime'],unit='s') 
+            # self.df_tick[reqId]['DateTime'] = pd.to_datetime(self.df_tick[reqId]['DateTime'],unit='s',tzinfo=timezone('UTC')) 
+            # self.df_tick[reqId]['DateTime'] =self.df_tick[reqId]['DateTime'].astimezone(timezone('Asia/Taipei'))
+            # self.df_tick[reqId]['DateTime'] = pd.to_datetime(self.df_tick[reqId]['DateTime'],unit='s', utc=True).map(lambda x: x.tz_convert('Asia/Taipei')) 
+            # self.df_tick[reqId]['DateTime'] = pd.to_datetime(self.df_tick[reqId]['DateTime'],unit='s', utc=True)\
+            #           .map(lambda x: x.tz_convert('Asia/Taipei')) 
             self.df_tick[reqId]=self.df_tick[reqId].set_index('DateTime')
             # self.df_tick[reqId].to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/df['+str(reqId)+'].csv',index=1 ,float_format='%.5f')  
 
@@ -450,18 +464,34 @@ class TestApp(EWrapper,EClient):
                 
                 
                 self.direction2[reqId]=self.st._RSI_HTF(reqId,self.df2[reqId],self.timeframe2)
-                if self.direction2_pre[reqId]!=self.direction2[reqId] and not np.isnan(self.direction2[reqId]):
+                if self.direction2_pre[reqId]!=self.direction2[reqId] and self.direction2[reqId] in ['BUY','SELL']:
+                    print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],str(self.timeframe2),'['+self.direction2[reqId]+']',self.timeframe3,self.direction3[reqId],self.timeframe4,self.direction4[reqId],self.timeframe5,self.direction5[reqId])
+                    self.direction2_pre[reqId]=self.direction2[reqId]
+                    
+                    # save all time frames and same direction
                     self.all_timeframes.loc[self.pair[reqId]]=self.pair[reqId],self.direction2[reqId],self.direction3[reqId],self.direction4[reqId],self.direction5[reqId]
                     self.all_timeframes.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_timeframe.csv',index=0)
-                    print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],'['+str(self.timeframe2)+']',self.direction2[reqId],self.timeframe3,self.direction3[reqId],self.timeframe4,self.direction4[reqId],self.timeframe5,self.direction5[reqId])
-                    self.direction2_pre[reqId]=self.direction2[reqId]
+                    # condition=(self.all_timeframes[str(self.timeframe2)]==self.direction[reqId])&(self.all_timeframes[str(self.timeframe3)]==self.direction[reqId])&(self.all_timeframes[str(self.timeframe4)]==self.direction[reqId])
+                    # self.same_direction = pd.concat([self.same_direction, self.all_timeframes[condition]], ignore_index=True) 
+                    # self.same_direction=self.same_direction.drop_duplicates(keep='last')
+                    # self.same_direction.drop(index=self.same_direction[condition==False],axis=0,inplace=True)
+                    # self.same_direction.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_same_direction.csv',index=0)
+                    
+                    # save all time frames and same direction
+                    self.same_direction.drop(self.same_direction.index,inplace=True)
+                    for pair in range(len(self.pair)):
+                        if self.direction[pair]==self.direction2[pair]==self.direction3[pair]==self.direction4[pair]:
+                            self.same_direction.loc[self.pair[pair]]=self.pair[pair],self.direction2[pair],self.direction3[pair],self.direction4[pair],self.direction5[pair]
+                    
+                    self.same_direction.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_same_direction.csv',index=0)
+                
+                    
+                    
                     # if self.direction[reqId]==self.direction2[reqId] and self.direction2[reqId]==self.direction3[reqId] and self.direction3[reqId]==self.direction4[reqId] and self.direction4[reqId]==self.direction5[reqId]:
                     if self.direction[reqId]==self.direction2[reqId] and self.direction2[reqId]==self.direction3[reqId] and self.direction3[reqId]==self.direction4[reqId]:
                         print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],'all direction:',self.direction[reqId])
                         send(self.pair[reqId]+' all direction: '+self.direction[reqId],token,chatid)
-                        condition=(self.all_timeframes[str(self.timeframe2)]==self.direction[reqId])&(self.all_timeframes[str(self.timeframe3)]==self.direction[reqId])&(self.all_timeframes[str(self.timeframe4)]==self.direction[reqId])
-                        self.same_direction=self.all_timeframes[condition]
-                        self.same_direction.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_same_direction.csv',index=0)
+                        
                 
                 # print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],str(self.timeframe2)+'K Bar:',self.df2[reqId].index[-1].strftime('%F %H:%M'))
                 # self.df2[reqId].reset_index(inplace=True) 
@@ -477,18 +507,33 @@ class TestApp(EWrapper,EClient):
                     self.df3[reqId].reset_index(drop=True)
                     
                     self.direction3[reqId]=self.st._RSI_HTF(reqId,self.df3[reqId],self.timeframe3)
-                    if self.direction3_pre[reqId]!=self.direction3[reqId] and np.isnan(self.direction3[reqId]):
+                    if self.direction3_pre[reqId]!=self.direction3[reqId] and self.direction3[reqId] in ['BUY','SELL']:
+                        print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],self.timeframe2,self.direction2[reqId],str(self.timeframe3),'['+self.direction3[reqId]+']',self.timeframe4,self.direction4[reqId],self.timeframe5,self.direction5[reqId])
+                        self.direction3_pre[reqId]=self.direction3[reqId]
+                        
+                        # save all time frames and same direction
                         self.all_timeframes.loc[self.pair[reqId]]=self.pair[reqId],self.direction2[reqId],self.direction3[reqId],self.direction4[reqId],self.direction5[reqId]
                         self.all_timeframes.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_timeframe.csv',index=0)
-                        print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],self.timeframe2,self.direction2[reqId],'['+str(self.timeframe3)+']',self.direction3[reqId],self.timeframe4,self.direction4[reqId],self.timeframe5,self.direction5[reqId])
-                        self.direction3_pre[reqId]=self.direction3[reqId]
+                        # condition=(self.all_timeframes[str(self.timeframe2)]==self.direction[reqId])&(self.all_timeframes[str(self.timeframe3)]==self.direction[reqId])&(self.all_timeframes[str(self.timeframe4)]==self.direction[reqId])
+                        # self.same_direction = pd.concat([self.same_direction, self.all_timeframes[condition]], ignore_index=True) 
+                        # self.same_direction=self.same_direction.drop_duplicates(keep='last')
+                        # self.same_direction.drop(index=self.same_direction[condition==False],axis=0,inplace=True)
+                        # self.same_direction.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_same_direction.csv',index=0)
+                        
+                         # save all time frames and same direction
+                        self.same_direction.drop(self.same_direction.index,inplace=True)
+                        for pair in range(len(self.pair)):
+                            if self.direction[pair]==self.direction2[pair]==self.direction3[pair]==self.direction4[pair]:
+                                self.same_direction.loc[self.pair[pair]]=self.pair[pair],self.direction2[pair],self.direction3[pair],self.direction4[pair],self.direction5[pair]
+                        
+                        self.same_direction.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_same_direction.csv',index=0)
+                
+                        
                         # if self.direction[reqId]==self.direction2[reqId] and self.direction2[reqId]==self.direction3[reqId] and self.direction3[reqId]==self.direction4[reqId] and self.direction4[reqId]==self.direction5[reqId]:
                         if self.direction[reqId]==self.direction2[reqId] and self.direction2[reqId]==self.direction3[reqId] and self.direction3[reqId]==self.direction4[reqId]:
                             print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],'all direction:',self.direction[reqId])
                             send(self.pair[reqId]+' all direction: '+self.direction[reqId],token,chatid)
-                            condition=(self.all_timeframes[str(self.timeframe2)]==self.direction[reqId])&(self.all_timeframes[str(self.timeframe3)]==self.direction[reqId])&(self.all_timeframes[str(self.timeframe4)]==self.direction[reqId])
-                            self.same_direction=self.all_timeframes[condition]
-                            self.same_direction.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_same_direction.csv',index=0)
+                            
                     # print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],str(self.timeframe3)+'K Bar:',self.df3[reqId].index[-1].strftime('%F %H:%M'))
                     # self.df3[reqId].reset_index(inplace=True) 
                     # self.df3[reqId].to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/df3_'+str(reqId)+'.csv',index=0 ,float_format='%.5f') 
@@ -503,18 +548,33 @@ class TestApp(EWrapper,EClient):
                         self.df4[reqId].reset_index(drop=True)
                         
                         self.direction4[reqId]=self.st._RSI_HTF(reqId,self.df4[reqId],self.timeframe4)
-                        if self.direction4_pre[reqId]!=self.direction4[reqId] and np.isnan(self.direction4[reqId]):
+                        if self.direction4_pre[reqId]!=self.direction4[reqId] and self.direction4[reqId] in ['BUY','SELL']:
+                            
+                            print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],self.timeframe2,self.direction2[reqId],self.timeframe3,self.direction3[reqId],str(self.timeframe4),'['+self.direction4[reqId]+']',self.timeframe5,self.direction5[reqId])
+                            self.direction4_pre[reqId]=self.direction4[reqId]
+                            
+                            # save all time frames and same direction
                             self.all_timeframes.loc[self.pair[reqId]]=self.pair[reqId],self.direction2[reqId],self.direction3[reqId],self.direction4[reqId],self.direction5[reqId]
                             self.all_timeframes.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_timeframe.csv',index=0)
-                            print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],self.timeframe2,self.direction2[reqId],self.timeframe3,self.direction3[reqId],'['+str(self.timeframe4)+']',self.direction4[reqId],self.timeframe5,self.direction5[reqId])
-                            self.direction4_pre[reqId]=self.direction4[reqId]
+                            # condition=(self.all_timeframes[str(self.timeframe2)]==self.direction[reqId])&(self.all_timeframes[str(self.timeframe3)]==self.direction[reqId])&(self.all_timeframes[str(self.timeframe4)]==self.direction[reqId])
+                            # self.same_direction = pd.concat([self.same_direction, self.all_timeframes[condition]], ignore_index=True) 
+                            # self.same_direction=self.same_direction.drop_duplicates(keep='last')
+                            # self.same_direction.drop(index=self.same_direction[condition==False],axis=0,inplace=True)
+                            # self.same_direction.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_same_direction.csv',index=0)
+                            
+                             # save all time frames and same direction
+                            self.same_direction.drop(self.same_direction.index,inplace=True)
+                            for pair in range(len(self.pair)):
+                                if self.direction[pair]==self.direction2[pair]==self.direction3[pair]==self.direction4[pair]:
+                                    self.same_direction.loc[self.pair[pair]]=self.pair[pair],self.direction2[pair],self.direction3[pair],self.direction4[pair],self.direction5[pair]
+                            
+                            self.same_direction.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_same_direction.csv',index=0)
+                
                             # if self.direction[reqId]==self.direction2[reqId] and self.direction2[reqId]==self.direction3[reqId] and self.direction3[reqId]==self.direction4[reqId] and self.direction4[reqId]==self.direction5[reqId]:
                             if self.direction[reqId]==self.direction2[reqId] and self.direction2[reqId]==self.direction3[reqId] and self.direction3[reqId]==self.direction4[reqId]:
                                 print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],'all direction:',self.direction[reqId])
                                 send(self.pair[reqId]+' all direction: '+self.direction[reqId],token,chatid)
-                                condition=(self.all_timeframes[str(self.timeframe2)]==self.direction[reqId])&(self.all_timeframes[str(self.timeframe3)]==self.direction[reqId])&(self.all_timeframes[str(self.timeframe4)]==self.direction[reqId])
-                                self.same_direction=self.all_timeframes[condition]
-                                self.same_direction.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_same_direction.csv',index=0)
+                                
                         
                         # print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],str(self.timeframe4)+'K Bar:',self.df4[reqId].index[-1].strftime('%F %H:%M'))
                         # self.df4[reqId].reset_index(inplace=True) 
@@ -528,11 +588,15 @@ class TestApp(EWrapper,EClient):
                             self.df5[reqId].reset_index(drop=True)
                         
                             self.direction5[reqId]=self.st._RSI_HTF(reqId,self.df5[reqId],self.timeframe5)
-                            if self.direction5_pre[reqId]!=self.direction5[reqId] and np.isnan(self.direction5[reqId]):
+                            if self.direction5_pre[reqId]!=self.direction5[reqId] and self.direction5[reqId] in ['BUY','SELL']:
+                                
+                                print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],self.timeframe2,self.direction2[reqId],self.timeframe3,self.direction3[reqId],self.timeframe4,self.direction4[reqId],str(self.timeframe5),'['+self.direction5[reqId]+']')
+                                self.direction5_pre[reqId]=self.direction5[reqId]
+                                
+                                # save all time frames and same direction
                                 self.all_timeframes.loc[self.pair[reqId]]=self.pair[reqId],self.direction2[reqId],self.direction3[reqId],self.direction4[reqId],self.direction5[reqId]
                                 self.all_timeframes.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_timeframe.csv',index=0)
-                                print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],self.timeframe2,self.direction2[reqId],self.timeframe3,self.direction3[reqId],self.timeframe4,self.direction4[reqId],'['+str(self.timeframe5)+']',self.direction5[reqId])
-                                self.direction5_pre[reqId]=self.direction5[reqId]
+                                
                                 if self.direction[reqId]==self.direction2[reqId] and self.direction2[reqId]==self.direction3[reqId] and self.direction3[reqId]==self.direction4[reqId] and self.direction4[reqId]==self.direction5[reqId]:
                                     print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],'all direction:',self.direction[reqId])
                                     send(self.pair[reqId]+' all direction: '+self.direction[reqId],token,chatid)
@@ -540,7 +604,7 @@ class TestApp(EWrapper,EClient):
             
             if (self.all_positions.loc[self.pair[reqId],'Quantity']==0.0 or (self.all_positions.loc[self.pair[reqId],'Quantity']!=0.0 and self.mode[reqId]=='PYRAMIDING')) and bar.close>self.all_positions.loc[self.pair[reqId],'Average Cost'] and int(datetime.now().timestamp())-self.LastOrderTime[reqId]>5*self.timeframe1*60:
                 
-                self.signal1[reqId]=self.st._RSI(self.df1[reqId])
+                self.signal1[reqId]=self.st._RSI(self.df1[reqId],reqId)
                 if self.isBusy:
                     time.sleep(2)
                 
@@ -548,8 +612,13 @@ class TestApp(EWrapper,EClient):
                 # print(self.direction[reqId])
                 # print(self.direction2[reqId])
                 
+                d2='SELL' if self.direction2[reqId]=='BUY' else 'BUY' if self.direction2[reqId]=='SELL' else 'None'
+                d3='SELL' if self.direction3[reqId]=='BUY' else 'BUY' if self.direction3[reqId]=='SELL' else 'None'
+                d4='SELL' if self.direction4[reqId]=='BUY' else 'BUY' if self.direction4[reqId]=='SELL' else 'None'
+                
                 # if self.signal1[reqId] == self.direction2[reqId] and self.signal1[reqId] ==self.direction[reqId]: # if entry signal produced and check no position then entry
-                if self.signal1[reqId] ==self.direction[reqId] and self.signal1[reqId] == self.direction2[reqId] and self.signal1[reqId] == self.direction3[reqId] and self.signal1[reqId] == self.direction4[reqId] : # if entry signal produced and check no position then entry
+                # if self.signal1[reqId] ==self.direction[reqId] and self.signal1[reqId] == self.direction2[reqId] and self.signal1[reqId] == self.direction3[reqId] and self.signal1[reqId] == self.direction4[reqId] : # if entry signal produced and check no position then entry
+                if self.signal1[reqId] ==self.direction[reqId] and self.signal1[reqId] != d2 and self.signal1[reqId] != d3 and self.signal1[reqId] != d4 : # if entry signal produced and check no position then entry
                     if self.all_positions.loc[self.pair[reqId],'Quantity']==0.0 and self.mode[reqId]=='':
                         
                         self.entryprice[reqId]=round(bar.close,self.info[reqId].get('round'))
@@ -675,41 +744,28 @@ class TestApp(EWrapper,EClient):
             self.OrderContract[pair]=self.AustraliaStockCFD(self.pair[pair])
         
         elif self.pair[pair] in self.LSEStock_cfd:
-            # self.QuoteContract[pair]=self.AustraliaStock(self.pair[pair])
             self.QuoteContract[pair]=self.LSEStock(self.pair[pair])
             self.OrderContract[pair]=self.LSEStockCFD(self.pair[pair])
         
         elif self.pair[pair] in self.TSXStock_cfd:
-            # self.QuoteContract[pair]=self.AustraliaStock(self.pair[pair])
             self.QuoteContract[pair]=self.TSXStock(self.pair[pair])
             self.OrderContract[pair]=self.TSXStock(self.pair[pair])
             
         elif self.pair[pair] in self.HK_Future:
-            # self.QuoteContract[pair]=self.AustraliaStock(self.pair[pair])
             self.QuoteContract[pair]=self.HKFuture(self.pair[pair])
             self.OrderContract[pair]=self.HKFuture(self.pair[pair])
         # ----------------------------------------------------------
         elif self.pair[pair] in self.Mutual_Fund:
-            # self.QuoteContract[pair]=self.AustraliaStock(self.pair[pair])
             self.QuoteContract[pair]=self.MutualFund(self.pair[pair])
             self.OrderContract[pair]=self.MutualFund(self.pair[pair])
         
         elif self.pair[pair] in self.Future:
-            # self.QuoteContract[pair]=self.AustraliaStock(self.pair[pair])
             self.QuoteContract[pair]=self.SimpleFuture(self.pair[pair])
             self.OrderContract[pair]=self.SimpleFuture(self.pair[pair])
         
         else:
             print(self.pair[pair])
             input('Wrong Symbol!!!')
-            
-        # if self.isUSstock==True:
-            #     self.QuoteContract[pair]=self.USStockAtSmart(self.pair[pair])
-            #     self.OrderContract[pair]=self.USStockCFD(self.pair[pair])
-            
-        # if self.isEUstock==True:
-            #     self.QuoteContract[pair]=self.EuropeanStockCFD(self.pair[pair])
-            #     self.OrderContract[pair]=self.EuropeanStockCFD(self.pair[pair])
         
         return
             
@@ -1129,6 +1185,7 @@ class TestApp(EWrapper,EClient):
                                 'Average Price':execution.avgPrice,
                                 'Cumulative Quantity':execution.cumQty,
                                 'Exit Price':0.0,
+                                'Unrealized PNL':0.0,
                                 'Realized PNL':0.0,
                                 'Commision':0.0,
                                 'TP':self.tp[self.reqId],
@@ -1229,7 +1286,7 @@ class TestApp(EWrapper,EClient):
             
             # update self.all_trades
             condition=(self.all_trades['Symbol']==self.pair[self.reqId])&(self.all_trades['Cumulative Quantity']!=0)
-            self.all_trades.loc[self.all_trades[condition].index[-1],'UnrealizedPNL']=round(unrealizedPNL/self.ConversionRate[contract.currency],2)
+            self.all_trades.loc[self.all_trades[condition].index[-1],'Unrealized PNL']=round(unrealizedPNL/self.ConversionRate[contract.currency],2)
             self.all_trades.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_trades.csv',index=1)
         except:
             pass
@@ -1247,7 +1304,8 @@ class TestApp(EWrapper,EClient):
                 self.trade[self.reqId][self.j]['Commision']=round(self.trade[self.reqId][self.j]['Commision']+commissionReport.commission/self.ConversionRate[commissionReport.currency],2)
                 
                 # update self.all_trades
-                condition=(self.all_trades['Symbol']==self.pair[self.reqId])
+                # condition=(self.all_trades['Symbol']==self.pair[self.reqId])
+                condition=(self.all_trades['Symbol']==self.pair[self.reqId])&(self.all_trades['Cumulative Quantity']==0)
                 self.all_trades.loc[self.all_trades[condition].index[-1],'Commision']=round(self.all_trades.loc[self.all_trades[condition].index[-1],'Commision']+commissionReport.commission/self.ConversionRate[commissionReport.currency],2)
                 self.all_trades.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_trades.csv',index=1)
                 
@@ -1453,7 +1511,7 @@ class TestApp(EWrapper,EClient):
 
 def read_token():
     config=configparser.ConfigParser()
-    config.read('/Users/apple/Documents/code/Python/IB-native-API/Output/telegramConfig.cfg')
+    config.read('/Users/apple/Documents/code/Python/IB-native-API/Settings/telegramConfig.cfg')
     token=config.get('Section_A','token')
     chatid=config.get('Section_A','chatid')
     return token,chatid
@@ -1500,8 +1558,8 @@ def main():
     # Connect
     app=TestApp()
     # app.connect('127.0.0.1',7497,1) # IB TWS
-    app.connect('127.0.0.1',7497,0) # IB TWS paper account
-    # app.connect('127.0.0.1',4002,0) # IB Gateway
+    # app.connect('127.0.0.1',7497,0) # IB TWS paper account
+    app.connect('127.0.0.1',4002,0) # IB Gateway
     time.sleep(1)
     
     # Update Portfolio
