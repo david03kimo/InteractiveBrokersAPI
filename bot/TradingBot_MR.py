@@ -41,13 +41,13 @@ add 2 timeframe to filt signal
 filter every timeframe:2,3,4,5
 df collum add direction
 check all TFs missed direction of dataframe
+all_trades is fail when not in pair exit.
 -----Finished
 
 -----testing----
 2nd time signal entry,scale-in,modify order: trade:'last_price':if open_trade didn't work
 no opentrade
 same_direction not fit chart:api timestamp local timezone:same_direction doesn't delete old.
-all_trades is fail when not in pair exit.
 indecies all gone.
 daily restart and csv all gone
 -----testing----
@@ -189,6 +189,7 @@ class TestApp(EWrapper,EClient):
         self.df_tick={} 
         self.df_res={}
         
+        
         # preset dict
         self.res_dict = {
             'Open':'first',
@@ -272,6 +273,8 @@ class TestApp(EWrapper,EClient):
         self.all_timeframes = pd.DataFrame([], columns = ['Symbol', str(self.timeframe2),str(self.timeframe3),str(self.timeframe4),str(self.timeframe5)]) 
         self.same_direction = pd.DataFrame([], columns = ['Symbol', str(self.timeframe2),str(self.timeframe3),str(self.timeframe4),str(self.timeframe5)]) 
         self.all_trades = pd.DataFrame([], columns = ['DateTime', 'Symbol','Side','Price','Shares','Average Price','Cumulative Quantity','Exit Price','Unrealized PNL','Realized PNL','Commision','TP','SL']) 
+        self.account = pd.DataFrame([], columns = ['DateTime', 'Account Name','Account Key','Account Value','Currency']) 
+        self.open_trades = pd.DataFrame([], columns = ['Symbol', 'DateTime']) 
         
         # basic setup
         for pair in range(len(self.pair)):
@@ -1214,7 +1217,14 @@ class TestApp(EWrapper,EClient):
                     pass
                 self.all_trades.loc[datetime.now().strftime("%F %H:%M:%S")]=datetime.now().strftime("%F %H:%M:%S"),self.pair[self.reqId],'BUY' if execution.side=='BOT' else 'SELL',execution.price,execution.shares,execution.avgPrice,execution.cumQty,0.0,0.0,0.0,0.0,self.tp[self.reqId],self.sl[self.reqId]
                 self.all_trades.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_trades.csv',index=1)
-            
+
+                
+                 # add self.open_trades
+                condition=(self.all_trades['Symbol']==sym)&(self.all_trades['Exit Price']==0)
+                self.open_trades.loc[sym]=sym,self.all_trades.loc[self.all_trades[condition].index[-1],'DateTime']
+                self.open_trades.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/open_trades.csv',index=1)
+
+                 
         else:
             try:
                 for j in self.open_trade[self.reqId]:
@@ -1239,7 +1249,7 @@ class TestApp(EWrapper,EClient):
                 
                 # update self.all_trades
                 try:
-                    condition=(self.all_trades['Symbol']==self.pair[self.reqId])&(self.all_trades['Exit Price']==0)
+                    condition=(self.all_trades['Symbol']==sym)&(self.all_trades['Exit Price']==0)
                     self.all_trades.loc[self.all_trades[condition].index[-1],'Exit Price']=execution.price
                     self.all_trades.loc[self.all_trades[condition].index[-1],'Average Price']=execution.avgPrice
                     self.all_trades.loc[self.all_trades[condition].index[-1],'Cumulative Quantity']=execution.cumQty
@@ -1247,6 +1257,10 @@ class TestApp(EWrapper,EClient):
                 except:
                     pass 
                 
+                # update self.open_trades
+                self.open_trades.drop([sym],axis = 0,inplace = True) 
+                self.open_trades.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/open_trades.csv',index=1)
+
             except KeyError:
                 return
         return
@@ -1266,6 +1280,13 @@ class TestApp(EWrapper,EClient):
         # logging.debug("setting nextValidOrderId: %d", orderId)
         self.nextOrderId=orderId
         # print(datetime.fromtimestamp(int(datetime.now().timestamp())),"NextValidId:", orderId)
+        return
+    
+    def updateAccountValue(self, key: str, val: str, currency: str,accountName: str):
+        super().updateAccountValue(key, val, currency, accountName)
+        # print("UpdateAccountValue. Key:", key, "Value:", val,"Currency:", currency, "AccountName:", accountName)
+        self.account.loc[datetime.now().strftime("%F %H:%M:%S")]=datetime.now().strftime("%F %H:%M:%S"),accountName,key,val,currency
+        self.account.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/account.csv',index=1)
         return
     
     def updatePortfolio(self,contract:Contract,position:float,marketPrice:float,marketValue:float,averageCost:float,unrealizedPNL:float,realizedPNL:float,accountName:str):
@@ -1296,7 +1317,7 @@ class TestApp(EWrapper,EClient):
             self.all_positions.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_positions.csv',index=0 )  
             
             # update self.all_trades
-            condition=(self.all_trades['Symbol']==self.pair[self.reqId])&(self.all_trades['Exit Price']==0)
+            condition=(self.all_trades['Symbol']==sym)&(self.all_trades['Exit Price']==0)
             self.all_trades.loc[self.all_trades[condition].index[-1],'Unrealized PNL']=round(unrealizedPNL/self.ConversionRate[contract.currency],2)
             self.all_trades.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_trades.csv',index=1)
         except:
@@ -1323,6 +1344,7 @@ class TestApp(EWrapper,EClient):
             except KeyError:
                 return
         else:
+            print(datetime.fromtimestamp(int(datetime.now().timestamp())),"CommissionReport:",self.pair[self.reqId],'Realized PNL',round(commissionReport.realizedPNL/self.ConversionRate[self.OrderContract[self.reqId].currency],2),'Commision',round(self.all_trades.loc[self.all_trades[condition].index[-1],'Commision']+commissionReport.commission/self.ConversionRate[commissionReport.currency],2))
              
             try:
                 self.trade[self.reqId][self.j].update({'Realized PNL':round(commissionReport.realizedPNL/self.ConversionRate[self.OrderContract[self.reqId].currency],2)})
@@ -1331,8 +1353,10 @@ class TestApp(EWrapper,EClient):
                 tradeRecord=dictTransform(self.trade)
                 # print(tradeRecord,self.open_trade)
                 toCSV(tradeRecord,self.open_trade)
+            except:
+                pass
                 
-                
+            try: 
                 # update self.all_trades
                 condition=(self.all_trades['Symbol']==self.pair[self.reqId])&(self.all_trades['Exit Price']!=0)
                 self.all_trades.loc[self.all_trades[condition].index[-1],'Commision']=round(self.all_trades.loc[self.all_trades[condition].index[-1],'Commision']+commissionReport.commission/self.ConversionRate[commissionReport.currency],2)
@@ -1340,7 +1364,9 @@ class TestApp(EWrapper,EClient):
                 self.all_trades.loc[self.all_trades[condition].index[-1],'Unrealized PNL']=0.0
                 self.all_trades.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_trades.csv',index=1)
                 
-            except KeyError:
+            except:
+                pass
+            
                 return
             
         # toCSV(tradeRecord,openTrade)
