@@ -50,6 +50,7 @@ no opentrade
 same_direction not fit chart:api timestamp local timezone:same_direction doesn't delete old.
 indecies all gone.
 daily restart and csv all gone
+place 2 order:record the timedelta with pre-order to make beyond 10 secs.
 -----testing----
 
 -----To do
@@ -273,9 +274,9 @@ class TestApp(EWrapper,EClient):
         self.all_timeframes = pd.DataFrame([], columns = ['Symbol', str(self.timeframe2),str(self.timeframe3),str(self.timeframe4),str(self.timeframe5)]) 
         self.same_direction = pd.DataFrame([], columns = ['Symbol', str(self.timeframe2),str(self.timeframe3),str(self.timeframe4),str(self.timeframe5)]) 
         self.all_trades = pd.DataFrame([], columns = ['DateTime', 'Symbol','Side','Price','Shares','Average Price','Cumulative Quantity','Exit Price','Unrealized PNL','Realized PNL','Commision','TP','SL']) 
+        self.open_trades = pd.DataFrame([], columns = ['Symbol','Pair NO.','DateTime']) 
         self.account = pd.DataFrame([], columns = ['DateTime', 'Account Name','Account Key','Account Value','Currency']) 
-        self.open_trades = pd.DataFrame([], columns = ['Symbol', 'DateTime']) 
-        
+
         # basic setup
         for pair in range(len(self.pair)):
             self.info[pair]={}
@@ -315,6 +316,12 @@ class TestApp(EWrapper,EClient):
         
         self.all_positions.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_positions.csv',index=0 )  
         self.all_trades.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_trades.csv',index=1)
+        self.open_trades.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/open_trades.csv',index=1)
+        
+        tradeRecord=dictTransform(self.trade)
+        toCSV(tradeRecord,self.open_trade)
+        # self.all_trades,self.open_trades=fromCSV()
+        # self.open_trade=fromCSV0()
         
         # if os.path.isfile('/Users/apple/Documents/code/Python/IB-native-API/Output/trades.csv') and os.path.isfile('/Users/apple/Documents/code/Python/IB-native-API/Output/openTrade.csv'):
         #     self.trade,self.open_trade=fromCSV()
@@ -1168,7 +1175,7 @@ class TestApp(EWrapper,EClient):
                 toCSV(tradeRecord,self.open_trade)
                 
                 # update self.all_trades
-                condition=(self.all_trades['Symbol']==self.pair[self.reqId])&(self.all_traders['Exit Price']==0)
+                condition=(self.all_trades['Symbol']==sym)&(self.all_traders['Exit Price']==0)
                 self.all_trades.loc[self.all_trades[condition].index[-1],'Price']=execution.price
                 self.all_trades.loc[self.all_trades[condition].index[-1],'Shares']=execution.shares
                 self.all_trades.loc[self.all_trades[condition].index[-1],'Average Price']=execution.avgPrice
@@ -1221,7 +1228,7 @@ class TestApp(EWrapper,EClient):
                 
                  # add self.open_trades
                 condition=(self.all_trades['Symbol']==sym)&(self.all_trades['Exit Price']==0)
-                self.open_trades.loc[sym]=sym,self.all_trades.loc[self.all_trades[condition].index[-1],'DateTime']
+                self.open_trades.loc[sym]=sym,pair,self.all_trades.loc[self.all_trades[condition].index[-1],'DateTime']
                 self.open_trades.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/open_trades.csv',index=1)
 
                  
@@ -1342,9 +1349,8 @@ class TestApp(EWrapper,EClient):
                 self.all_trades.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_trades.csv',index=1)
                 
             except KeyError:
-                return
+                pass
         else:
-            print(datetime.fromtimestamp(int(datetime.now().timestamp())),"CommissionReport:",self.pair[self.reqId],'Realized PNL',round(commissionReport.realizedPNL/self.ConversionRate[self.OrderContract[self.reqId].currency],2),'Commision',round(self.all_trades.loc[self.all_trades[condition].index[-1],'Commision']+commissionReport.commission/self.ConversionRate[commissionReport.currency],2))
              
             try:
                 self.trade[self.reqId][self.j].update({'Realized PNL':round(commissionReport.realizedPNL/self.ConversionRate[self.OrderContract[self.reqId].currency],2)})
@@ -1366,23 +1372,6 @@ class TestApp(EWrapper,EClient):
                 
             except:
                 pass
-            
-                return
-            
-        # toCSV(tradeRecord,openTrade)
-        # save trade dict
-        tradeRecord=dictTransform(self.trade)
-        # print(tradeRecord,self.open_trade)
-        toCSV(tradeRecord,self.open_trade)
-        
-        
-        # a=[]
-        # for i in self.trade.keys():
-        #     for j in self.trade[i].keys():
-        #         a.append(self.trade[i][j])
-        # df_trade=pd.DataFrame(a)
-        # df_trade.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/trades.csv',sep=',',index=0 )   
-        
         return
 
 
@@ -1570,7 +1559,13 @@ def toCSV(tradeRecord,openTrade):
         
     return
 
+# write all_trades record to CSV
+def toCSV1(all_trades):
+    all_trades.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_trades.csv',mode='w',index=1)
+    
+
 # read trades record from csv
+'''
 def fromCSV():
     dict_tradeRecord={}
     dict_openTrade={}
@@ -1591,7 +1586,35 @@ def fromCSV():
         else:
             dict_openTrade[key]=[int(x) for x in dict_openTrade[key]]
     return dict_tradeRecord,dict_openTrade
-    
+'''
+
+
+def fromCSV0():
+    dict_openTrade={}
+    df_openTrade=pd.read_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/openTrade.csv',index_col=0)
+    df_openTrade['0']=df_openTrade['0'].fillna(-1)
+    df_openTrade['0']=df_openTrade['0'].astype(int)
+    df_openTrade['0']=df_openTrade['0'].astype(str)
+    df_openTrade['0']=df_openTrade['0'].replace('-1',np.nan)
+    for index in df_openTrade.index:
+        dict_openTrade[index]=list(df_openTrade.loc[index])
+    for key in dict_openTrade:
+        if dict_openTrade[key]==[np.nan]:
+            dict_openTrade[key]=[]
+        else:
+            dict_openTrade[key]=[int(x) for x in dict_openTrade[key]]
+    return dict_openTrade
+
+
+
+# Read all_trades dataframe from CSV
+def fromCSV():
+    if not os.path.isfile('/Users/apple/Documents/code/Python/IB-native-API/Output/all_trades.csv') or os.path.isfile('/Users/apple/Documents/code/Python/IB-native-API/Output/open_trades.csv'):
+        return pd.DataFrame([], columns = ['DateTime', 'Symbol','Side','Price','Shares','Average Price','Cumulative Quantity','Exit Price','Unrealized PNL','Realized PNL','Commision','TP','SL']),pd.DataFrame([], columns = ['Symbol', 'DateTime']) 
+    elif os.path.isfile('/Users/apple/Documents/code/Python/IB-native-API/Output/all_trades.csv') and os.path.isfile('/Users/apple/Documents/code/Python/IB-native-API/Output/open_trades.csv'):
+        df1=pd.read_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_trades.csv',index_col=0)
+        df2=pd.read_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/open_trades.csv',index_col=0)
+        return df1,df2
             
 def main():
     # Connect
