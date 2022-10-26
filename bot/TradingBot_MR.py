@@ -46,11 +46,10 @@ all_trades is fail when not in pair exit.
 
 -----testing----
 2nd time signal entry,scale-in,modify order: trade:'last_price':if open_trade didn't work
-no opentrade
 same_direction not fit chart:api timestamp local timezone:same_direction doesn't delete old.
-indecies all gone.
-daily restart and csv all gone
+daily restart and csv all gone：del open_trades record when empty：no opentrade
 place 2 order:record the timedelta with pre-order to make beyond 10 secs.
+
 -----testing----
 
 -----To do
@@ -315,12 +314,15 @@ class TestApp(EWrapper,EClient):
             self.all_positions.loc[self.pair[pair]]=self.pair[pair],self.OrderContract[pair].secType,0.0,0.0,0.0,0.0
         
         self.all_positions.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_positions.csv',index=0 )  
-        self.all_trades.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_trades.csv',index=1)
-        self.open_trades.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/open_trades.csv',index=1)
+        # self.all_trades.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_trades.csv',index=1)
+        # self.open_trades.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/open_trades.csv',index=1)
         
+        #save self.trade and self.open_trade csv
         tradeRecord=dictTransform(self.trade)
         toCSV(tradeRecord,self.open_trade)
-        # self.all_trades,self.open_trades=fromCSV()
+        
+        #read 
+        self.all_trades,self.open_trades=fromCSV()
         # self.open_trade=fromCSV0()
         
         # if os.path.isfile('/Users/apple/Documents/code/Python/IB-native-API/Output/trades.csv') and os.path.isfile('/Users/apple/Documents/code/Python/IB-native-API/Output/openTrade.csv'):
@@ -1609,8 +1611,8 @@ def fromCSV0():
 
 # Read all_trades dataframe from CSV
 def fromCSV():
-    if not os.path.isfile('/Users/apple/Documents/code/Python/IB-native-API/Output/all_trades.csv') or os.path.isfile('/Users/apple/Documents/code/Python/IB-native-API/Output/open_trades.csv'):
-        return pd.DataFrame([], columns = ['DateTime', 'Symbol','Side','Price','Shares','Average Price','Cumulative Quantity','Exit Price','Unrealized PNL','Realized PNL','Commision','TP','SL']),pd.DataFrame([], columns = ['Symbol', 'DateTime']) 
+    if not os.path.isfile('/Users/apple/Documents/code/Python/IB-native-API/Output/all_trades.csv') or not os.path.isfile('/Users/apple/Documents/code/Python/IB-native-API/Output/open_trades.csv'):
+        return pd.DataFrame([], columns = ['DateTime', 'Symbol','Side','Price','Shares','Average Price','Cumulative Quantity','Exit Price','Unrealized PNL','Realized PNL','Commision','TP','SL']),pd.DataFrame([], columns = ['Symbol','Pair NO.','DateTime']) 
     elif os.path.isfile('/Users/apple/Documents/code/Python/IB-native-API/Output/all_trades.csv') and os.path.isfile('/Users/apple/Documents/code/Python/IB-native-API/Output/open_trades.csv'):
         df1=pd.read_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_trades.csv',index_col=0)
         df2=pd.read_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/open_trades.csv',index_col=0)
