@@ -53,6 +53,9 @@ place 2 order:record the timedelta with pre-order to make beyond 10 secs.
 -----testing----
 
 -----To do
+turn-off HTF
+realtime HTF
+updateprofolio by all_trades df
 change self.trade and self.opentrade to df to csv and easy restart
 check Cumulative Quantity
 re-read pair and re-reqHistoricalData function
@@ -615,6 +618,11 @@ class TestApp(EWrapper,EClient):
                                     send(self.pair[reqId]+' all direction: '+self.direction[reqId],token,chatid)
                                     
             
+            # update the unrealized P&L
+            self.reqAccountUpdates(True,"")
+            
+            
+            #check the signal
             if (self.all_positions.loc[self.pair[reqId],'Quantity']==0.0 or (self.all_positions.loc[self.pair[reqId],'Quantity']!=0.0 and self.mode[reqId]=='PYRAMIDING')) and bar.close>self.all_positions.loc[self.pair[reqId],'Average Cost'] and int(datetime.now().timestamp())-self.LastOrderTime[reqId]>5*self.timeframe1*60:
                 
                 self.signal1[reqId]=self.st._RSI(self.df1[reqId],reqId)
@@ -1162,7 +1170,11 @@ class TestApp(EWrapper,EClient):
         self.LastOrderTime[self.reqId]=int(datetime.now().timestamp()) 
         
         if (execution.side=='BOT' and self.direction[self.reqId]=='BUY') or (execution.side=='SLD' and self.direction[self.reqId]=='SELL'): 
-            if self.all_positions.loc[self.pair[reqId],'Quantity']!=0:
+            if self.all_positions.loc[self.pair[self.reqId],'Quantity']!=0:
+                while len(self.open_trade[self.reqId])==0:
+                    print(datetime.fromtimestamp(int(datetime.now().timestamp())),'self.open_trade[self.reqId] empty')
+                    time.sleep(1)
+                    
                 for j in self.open_trade[self.reqId]:
                     self.j=j #For linking to commissionReport
                 self.trade[self.reqId][self.j].update({'Price':execution.price})
