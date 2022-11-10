@@ -1,4 +1,5 @@
 '''
+-----Finished
 pandas.concat
 print(OrderContract.symbol) 
 Multiple pairs trading:  
@@ -42,46 +43,38 @@ filter every timeframe:2,3,4,5
 df collum add direction
 check all TFs missed direction of dataframe
 all_trades is fail when not in pair exit.
------Finished
 
 -----testing----
-2nd time signal entry,scale-in,modify order: trade:'last_price':if open_trade didn't work
+2nd time signal entry,scale-in,modify order: trade:'last_price':if open_trade didn't work:check Cumulative Quantity
 same_direction not fit chart:api timestamp local timezone:same_direction doesn't delete old.
 daily restart and csv all gone：del open_trades record when empty：no opentrade
 place 2 order:record the timedelta with pre-order to make beyond 10 secs.
-
------testing----
+xagusd error
 
 -----To do
-turn-off HTF
-realtime HTF
-updateprofolio by all_trades df
+try a test.openorder and orderstatus and completedOrder to get SL order and avoid order repeat. MKT2LMT,open order=0.network lag,send order but not yet execute,so send again at next bar.
+realtime HTF/turn-off HTF
+data resample structure.dict:symbol,action,mode,rr,bet,info(mintick),trade,self.trade and all_position combine and use dict. use for j in trade.keys():取代 for j in open_trade:,and considerate renew csv or add tradingview alert.
 change self.trade and self.opentrade to df to csv and easy restart
-check Cumulative Quantity
 re-read pair and re-reqHistoricalData function
-considerate margin availability
-hang cannot restart,use quqe,check ram and cpu，unlimit isBusy，que
-exit at timeframe 2 or 3 or 4
-report open order of SL to check：auto add SL to positions without SL order
-xagusd error
-market close,open time,don't need to data lag and restart
-Warning: Your order was repriced so as not to cross a related resting order
 historicalDataUpdate send double same order
+updateprofolio by all_trades df:handle not in pair list positions.
+report open order of SL to check：auto add SL to positions without SL order
+alert at 2,3,4,5 TF ready to support manual trading:for screen stocks and stock options.
+considerate margin availability
+market close,open time,don't need to data lag and restart
 test AUD:Take a look at Minimum Price Increment to see how you can use the MarketRuleIds field in the ContractDetails object and IBApi::EClient::reqMarketRule: 
 volumn increment
+hang cannot restart,use quqe,check ram and cpu，unlimit isBusy，que
+Warning: Your order was repriced so as not to cross a related resting order
 strange XAUUSD SL
-handle not in pair list positions.
-try a test.openorder and orderstatus and completedOrder to get SL order and avoid order repeat. MKT2LMT,open order=0.network lag,send order but not yet execute,so send again at next bar.
-data resample structure.dict:symbol,action,mode,rr,bet,info(mintick),trade,self.trade and all_position combine and use dict. use for j in trade.keys():取代 for j in open_trade:,and considerate renew csv or add tradingview alert.
-Risk5:finetune SL:lower than 20 lowest,and at least 6 pips to close.    
 nextOrderId plus ()
 sync pyramiding and non-pyramiding trade dict items.
 delete df out of date data in case too big.
-OCA,condition order
 if SL didn't execute
 change UI:tradingview sent:'signal':buy/pyramiding,'symbol'into self.pair and historicalupdate.pair=0,if signal pair+=1.self.OrderContract[pair].schedulely re-read csv or tradingview,if new order,add symbol dict to run.
 stocks CFD/options trading:need to subscribe market data streaming 
-alert at 2,3,4,5 TF ready to support manual trading:for screen stocks and stock options.
+
 
 '''
 from ibapi.client import EClient
@@ -126,7 +119,7 @@ class TestApp(EWrapper,EClient):
         EClient.__init__(self,self)
         
         # read orders
-        df_order=pd.read_csv('/Users/apple/Documents/code/Python/IB-native-API/Settings/Orders.csv')
+        df_order=pd.read_csv('/Users/apple/Documents/code/Python/IBAPI/Settings/Orders.csv')
         df_order=df_order.values.tolist()
         order=[]
         for i in range(len(df_order)):
@@ -164,7 +157,7 @@ class TestApp(EWrapper,EClient):
         
         # read config 
         config=configparser.ConfigParser()
-        config.read('/Users/apple/Documents/code/Python/IB-native-API/Settings/config.cfg')
+        config.read('/Users/apple/Documents/code/Python/IBAPI/Settings/config.cfg')
         self.BetAmout=float(config.get('MM','BetAmout'))
         self.rr=float(config.get('MM','rr'))
         self.timeframe1=int(config.get('MM','timeframe1'))
@@ -316,9 +309,9 @@ class TestApp(EWrapper,EClient):
             self.PairToContract(pair)    
             self.all_positions.loc[self.pair[pair]]=self.pair[pair],self.OrderContract[pair].secType,0.0,0.0,0.0,0.0
         
-        self.all_positions.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_positions.csv',index=0 )  
-        # self.all_trades.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_trades.csv',index=1)
-        # self.open_trades.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/open_trades.csv',index=1)
+        self.all_positions.to_csv('/Users/apple/Documents/code/Python/IBAPI/Output/all_positions.csv',index=0 )  
+        # self.all_trades.to_csv('/Users/apple/Documents/code/Python/IBAPI/Output/all_trades.csv',index=1)
+        # self.open_trades.to_csv('/Users/apple/Documents/code/Python/IBAPI/Output/open_trades.csv',index=1)
         
         #save self.trade and self.open_trade csv
         tradeRecord=dictTransform(self.trade)
@@ -328,7 +321,7 @@ class TestApp(EWrapper,EClient):
         self.all_trades,self.open_trades=fromCSV()
         # self.open_trade=fromCSV0()
         
-        # if os.path.isfile('/Users/apple/Documents/code/Python/IB-native-API/Output/trades.csv') and os.path.isfile('/Users/apple/Documents/code/Python/IB-native-API/Output/openTrade.csv'):
+        # if os.path.isfile('/Users/apple/Documents/code/Python/IBAPI/Output/trades.csv') and os.path.isfile('/Users/apple/Documents/code/Python/IBAPI/Output/openTrade.csv'):
         #     self.trade,self.open_trade=fromCSV()
         # else:
         #     pass
@@ -357,7 +350,7 @@ class TestApp(EWrapper,EClient):
         del self.data[reqId][-1]
         self.df1[reqId] = pd.DataFrame(self.data[reqId],columns=['DateTime','Open','High','Low', 'Close','Volume'])
         self.df1[reqId]['DateTime'] = pd.to_datetime(self.df1[reqId]['DateTime'],unit='s')
-        # self.df1[reqId].to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/df1_'+str(reqId)+'.csv',index=0 ,float_format='%.5f')   
+        # self.df1[reqId].to_csv('/Users/apple/Documents/code/Python/IBAPI/Output/df1_'+str(reqId)+'.csv',index=0 ,float_format='%.5f')   
         self.data[reqId]=[] #清掉是否有助於記憶體的節省？
         super().historicalDataEnd(reqId, start, end)
         # print( datetime.fromtimestamp(int(datetime.now().timestamp())),'HistoricalDataEnd. ReqId:', reqId, 'from', start, 'to', end)
@@ -402,7 +395,7 @@ class TestApp(EWrapper,EClient):
         
         # save all time frames direction
         self.all_timeframes.loc[self.pair[reqId]]=self.pair[reqId],self.direction2[reqId],self.direction3[reqId],self.direction4[reqId],self.direction5[reqId]
-        self.all_timeframes.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_timeframe.csv',index=0)
+        self.all_timeframes.to_csv('/Users/apple/Documents/code/Python/IBAPI/Output/all_timeframe.csv',index=0)
         # print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],self.timeframe2,self.direction2[reqId],self.timeframe3,self.direction3[reqId],self.timeframe4,self.direction4[reqId],self.timeframe5,self.direction5[reqId])
 
         # save the same direction of all time frames
@@ -410,14 +403,14 @@ class TestApp(EWrapper,EClient):
         # condition=(self.all_timeframes[str(self.timeframe2)]==self.direction[reqId])&(self.all_timeframes[str(self.timeframe3)]==self.direction[reqId])&(self.all_timeframes[str(self.timeframe4)]==self.direction[reqId])
         # self.same_direction = pd.concat([self.same_direction, self.all_timeframes[condition]], ignore_index=True) 
         # self.same_direction=self.same_direction.drop_duplicates(keep='last')
-        # self.same_direction.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_same_direction.csv',index=0)
+        # self.same_direction.to_csv('/Users/apple/Documents/code/Python/IBAPI/Output/all_same_direction.csv',index=0)
         
         self.same_direction.drop(self.same_direction.index,inplace=True)
         for pair in range(len(self.pair)):
             if self.direction[pair]==self.direction2[pair]==self.direction3[pair]==self.direction4[pair]:
                 self.same_direction.loc[self.pair[pair]]=self.pair[pair],self.direction2[pair],self.direction3[pair],self.direction4[pair],self.direction5[pair]
         
-        self.same_direction.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_same_direction.csv',index=0)
+        self.same_direction.to_csv('/Users/apple/Documents/code/Python/IBAPI/Output/all_same_direction.csv',index=0)
                 
         
         
@@ -433,7 +426,7 @@ class TestApp(EWrapper,EClient):
         # self.df_tick[reqId] = pd.DataFrame(self.data1[reqId],columns=['DateTime','Open','High','Low', 'Close','Volume'])
         # self.df_tick[reqId]['DateTime'] = pd.to_datetime(self.df_tick[reqId]['DateTime'],unit='s') 
         # self.df_tick[reqId]=self.df_tick[reqId].set_index('DateTime')
-        # self.df_tick[reqId].to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/df['+str(reqId)+'].csv',index=1 ,float_format='%.5f')  
+        # self.df_tick[reqId].to_csv('/Users/apple/Documents/code/Python/IBAPI/Output/df['+str(reqId)+'].csv',index=1 ,float_format='%.5f')  
 
         # read telegram token and chat id
         token,chatid=read_token()
@@ -447,7 +440,7 @@ class TestApp(EWrapper,EClient):
             # self.df_tick[reqId]['DateTime'] = pd.to_datetime(self.df_tick[reqId]['DateTime'],unit='s', utc=True)\
             #           .map(lambda x: x.tz_convert('Asia/Taipei')) 
             self.df_tick[reqId]=self.df_tick[reqId].set_index('DateTime')
-            # self.df_tick[reqId].to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/df['+str(reqId)+'].csv',index=1 ,float_format='%.5f')  
+            # self.df_tick[reqId].to_csv('/Users/apple/Documents/code/Python/IBAPI/Output/df['+str(reqId)+'].csv',index=1 ,float_format='%.5f')  
 
 
             self.df_res[reqId]=self.df_tick[reqId].resample(str(self.timeframe1)+'min', closed='left', label='left').agg(self.res_dict)
@@ -456,14 +449,14 @@ class TestApp(EWrapper,EClient):
             del self.data1[reqId][0:len(self.data1[reqId])-1]
             self.df_res[reqId].drop(self.df_res[reqId].index[-1], axis=0, inplace=True) #delete the new open bar at lastest appended row
             # print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],str(self.timeframe1)+'K Bar:',self.df_res[reqId].index[-1].strftime('%F %H:%M') if len(self.df_res[reqId])!=0 else 'No Resample Bar')
-            # self.df_res[reqId].to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/df_res'+str(reqId)+'.csv', mode='a', header=False,float_format='%.5f')
-            # self.df_res[reqId].to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/df_res'+str(reqId)+'.csv',index=1 ,float_format='%.5f')
+            # self.df_res[reqId].to_csv('/Users/apple/Documents/code/Python/IBAPI/Output/df_res'+str(reqId)+'.csv', mode='a', header=False,float_format='%.5f')
+            # self.df_res[reqId].to_csv('/Users/apple/Documents/code/Python/IBAPI/Output/df_res'+str(reqId)+'.csv',index=1 ,float_format='%.5f')
             self.df_res[reqId].reset_index(inplace=True) 
 
             self.df1[reqId]=pd.concat([self.df1[reqId], self.df_res[reqId]],ignore_index=True)
             
             # if self.pair[reqId] in self.LSEStock_cfd:
-            # self.df1[reqId].to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/df1_'+str(reqId)+'.csv',index=0 ,float_format='%.5f') 
+            # self.df1[reqId].to_csv('/Users/apple/Documents/code/Python/IBAPI/Output/df1_'+str(reqId)+'.csv',index=0 ,float_format='%.5f') 
             
             # print('type of df_tick:',type(self.df_tick))
             
@@ -486,12 +479,12 @@ class TestApp(EWrapper,EClient):
                     
                     # save all time frames and same direction
                     self.all_timeframes.loc[self.pair[reqId]]=self.pair[reqId],self.direction2[reqId],self.direction3[reqId],self.direction4[reqId],self.direction5[reqId]
-                    self.all_timeframes.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_timeframe.csv',index=0)
+                    self.all_timeframes.to_csv('/Users/apple/Documents/code/Python/IBAPI/Output/all_timeframe.csv',index=0)
                     # condition=(self.all_timeframes[str(self.timeframe2)]==self.direction[reqId])&(self.all_timeframes[str(self.timeframe3)]==self.direction[reqId])&(self.all_timeframes[str(self.timeframe4)]==self.direction[reqId])
                     # self.same_direction = pd.concat([self.same_direction, self.all_timeframes[condition]], ignore_index=True) 
                     # self.same_direction=self.same_direction.drop_duplicates(keep='last')
                     # self.same_direction.drop(index=self.same_direction[condition==False],axis=0,inplace=True)
-                    # self.same_direction.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_same_direction.csv',index=0)
+                    # self.same_direction.to_csv('/Users/apple/Documents/code/Python/IBAPI/Output/all_same_direction.csv',index=0)
                     
                     # save all time frames and same direction
                     self.same_direction.drop(self.same_direction.index,inplace=True)
@@ -499,7 +492,7 @@ class TestApp(EWrapper,EClient):
                         if self.direction[pair]==self.direction2[pair]==self.direction3[pair]==self.direction4[pair]:
                             self.same_direction.loc[self.pair[pair]]=self.pair[pair],self.direction2[pair],self.direction3[pair],self.direction4[pair],self.direction5[pair]
                     
-                    self.same_direction.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_same_direction.csv',index=0)
+                    self.same_direction.to_csv('/Users/apple/Documents/code/Python/IBAPI/Output/all_same_direction.csv',index=0)
                 
                     
                     
@@ -511,7 +504,7 @@ class TestApp(EWrapper,EClient):
                 
                 # print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],str(self.timeframe2)+'K Bar:',self.df2[reqId].index[-1].strftime('%F %H:%M'))
                 # self.df2[reqId].reset_index(inplace=True) 
-                # self.df2[reqId].to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/df2_'+str(reqId)+'.csv',index=0 ,float_format='%.5f') 
+                # self.df2[reqId].to_csv('/Users/apple/Documents/code/Python/IBAPI/Output/df2_'+str(reqId)+'.csv',index=0 ,float_format='%.5f') 
                 
                 
                 if self.now_date != self.pre_date and self.now_date/(self.timeframe3*60)==self.now_date//(self.timeframe3*60):
@@ -529,12 +522,12 @@ class TestApp(EWrapper,EClient):
                         
                         # save all time frames and same direction
                         self.all_timeframes.loc[self.pair[reqId]]=self.pair[reqId],self.direction2[reqId],self.direction3[reqId],self.direction4[reqId],self.direction5[reqId]
-                        self.all_timeframes.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_timeframe.csv',index=0)
+                        self.all_timeframes.to_csv('/Users/apple/Documents/code/Python/IBAPI/Output/all_timeframe.csv',index=0)
                         # condition=(self.all_timeframes[str(self.timeframe2)]==self.direction[reqId])&(self.all_timeframes[str(self.timeframe3)]==self.direction[reqId])&(self.all_timeframes[str(self.timeframe4)]==self.direction[reqId])
                         # self.same_direction = pd.concat([self.same_direction, self.all_timeframes[condition]], ignore_index=True) 
                         # self.same_direction=self.same_direction.drop_duplicates(keep='last')
                         # self.same_direction.drop(index=self.same_direction[condition==False],axis=0,inplace=True)
-                        # self.same_direction.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_same_direction.csv',index=0)
+                        # self.same_direction.to_csv('/Users/apple/Documents/code/Python/IBAPI/Output/all_same_direction.csv',index=0)
                         
                          # save all time frames and same direction
                         self.same_direction.drop(self.same_direction.index,inplace=True)
@@ -542,7 +535,7 @@ class TestApp(EWrapper,EClient):
                             if self.direction[pair]==self.direction2[pair]==self.direction3[pair]==self.direction4[pair]:
                                 self.same_direction.loc[self.pair[pair]]=self.pair[pair],self.direction2[pair],self.direction3[pair],self.direction4[pair],self.direction5[pair]
                         
-                        self.same_direction.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_same_direction.csv',index=0)
+                        self.same_direction.to_csv('/Users/apple/Documents/code/Python/IBAPI/Output/all_same_direction.csv',index=0)
                 
                         
                         # if self.direction[reqId]==self.direction2[reqId] and self.direction2[reqId]==self.direction3[reqId] and self.direction3[reqId]==self.direction4[reqId] and self.direction4[reqId]==self.direction5[reqId]:
@@ -552,7 +545,7 @@ class TestApp(EWrapper,EClient):
                             
                     # print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],str(self.timeframe3)+'K Bar:',self.df3[reqId].index[-1].strftime('%F %H:%M'))
                     # self.df3[reqId].reset_index(inplace=True) 
-                    # self.df3[reqId].to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/df3_'+str(reqId)+'.csv',index=0 ,float_format='%.5f') 
+                    # self.df3[reqId].to_csv('/Users/apple/Documents/code/Python/IBAPI/Output/df3_'+str(reqId)+'.csv',index=0 ,float_format='%.5f') 
                     
                     
                     if self.now_date != self.pre_date and self.now_date/(self.timeframe4*60)==self.now_date//(self.timeframe4*60):
@@ -571,12 +564,12 @@ class TestApp(EWrapper,EClient):
                             
                             # save all time frames and same direction
                             self.all_timeframes.loc[self.pair[reqId]]=self.pair[reqId],self.direction2[reqId],self.direction3[reqId],self.direction4[reqId],self.direction5[reqId]
-                            self.all_timeframes.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_timeframe.csv',index=0)
+                            self.all_timeframes.to_csv('/Users/apple/Documents/code/Python/IBAPI/Output/all_timeframe.csv',index=0)
                             # condition=(self.all_timeframes[str(self.timeframe2)]==self.direction[reqId])&(self.all_timeframes[str(self.timeframe3)]==self.direction[reqId])&(self.all_timeframes[str(self.timeframe4)]==self.direction[reqId])
                             # self.same_direction = pd.concat([self.same_direction, self.all_timeframes[condition]], ignore_index=True) 
                             # self.same_direction=self.same_direction.drop_duplicates(keep='last')
                             # self.same_direction.drop(index=self.same_direction[condition==False],axis=0,inplace=True)
-                            # self.same_direction.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_same_direction.csv',index=0)
+                            # self.same_direction.to_csv('/Users/apple/Documents/code/Python/IBAPI/Output/all_same_direction.csv',index=0)
                             
                              # save all time frames and same direction
                             self.same_direction.drop(self.same_direction.index,inplace=True)
@@ -584,7 +577,7 @@ class TestApp(EWrapper,EClient):
                                 if self.direction[pair]==self.direction2[pair]==self.direction3[pair]==self.direction4[pair]:
                                     self.same_direction.loc[self.pair[pair]]=self.pair[pair],self.direction2[pair],self.direction3[pair],self.direction4[pair],self.direction5[pair]
                             
-                            self.same_direction.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_same_direction.csv',index=0)
+                            self.same_direction.to_csv('/Users/apple/Documents/code/Python/IBAPI/Output/all_same_direction.csv',index=0)
                 
                             # if self.direction[reqId]==self.direction2[reqId] and self.direction2[reqId]==self.direction3[reqId] and self.direction3[reqId]==self.direction4[reqId] and self.direction4[reqId]==self.direction5[reqId]:
                             if self.direction[reqId]==self.direction2[reqId] and self.direction2[reqId]==self.direction3[reqId] and self.direction3[reqId]==self.direction4[reqId]:
@@ -594,7 +587,7 @@ class TestApp(EWrapper,EClient):
                         
                         # print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],str(self.timeframe4)+'K Bar:',self.df4[reqId].index[-1].strftime('%F %H:%M'))
                         # self.df4[reqId].reset_index(inplace=True) 
-                        # self.df4[reqId].to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/df4_'+str(reqId)+'.csv',index=0 ,float_format='%.5f') 
+                        # self.df4[reqId].to_csv('/Users/apple/Documents/code/Python/IBAPI/Output/df4_'+str(reqId)+'.csv',index=0 ,float_format='%.5f') 
                        
                             
                         if self.now_date != self.pre_date and self.now_date/(self.timeframe5*60)==self.now_date//(self.timeframe5*60):
@@ -611,7 +604,7 @@ class TestApp(EWrapper,EClient):
                                 
                                 # save all time frames and same direction
                                 self.all_timeframes.loc[self.pair[reqId]]=self.pair[reqId],self.direction2[reqId],self.direction3[reqId],self.direction4[reqId],self.direction5[reqId]
-                                self.all_timeframes.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_timeframe.csv',index=0)
+                                self.all_timeframes.to_csv('/Users/apple/Documents/code/Python/IBAPI/Output/all_timeframe.csv',index=0)
                                 
                                 if self.direction[reqId]==self.direction2[reqId] and self.direction2[reqId]==self.direction3[reqId] and self.direction3[reqId]==self.direction4[reqId] and self.direction4[reqId]==self.direction5[reqId]:
                                     print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.pair[reqId],'all direction:',self.direction[reqId])
@@ -702,7 +695,7 @@ class TestApp(EWrapper,EClient):
             a=[]
             a.append(self.ConversionRate)
             df=pd.DataFrame(a)
-            df.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/ConversionRate.csv',index=0 )  
+            df.to_csv('/Users/apple/Documents/code/Python/IBAPI/Output/ConversionRate.csv',index=0 )  
             self.cancelRealTimeBars(reqId)
         return
     
@@ -798,7 +791,7 @@ class TestApp(EWrapper,EClient):
         elif contract.symbol in self.pair:
             sym=contract.symbol
         else:
-            sym='Not In Pair'
+            sym='Not In Pair:'+contract.symbol+contract.currency
             pair=-1
             # if not contract in self.NotInPair:
             #     self.NotInPair.append(contract)
@@ -1158,7 +1151,7 @@ class TestApp(EWrapper,EClient):
         
         
         sym,pair=self.ContractToPair(contract)
-        if sym=='Not In Pair':
+        if sym[:12]=='Not In Pair:':
             print(sym)
             return
         
@@ -1195,7 +1188,7 @@ class TestApp(EWrapper,EClient):
                 self.all_trades.loc[self.all_trades[condition].index[-1],'Average Price']=execution.avgPrice
                 self.all_trades.loc[self.all_trades[condition].index[-1],'Cumulative Quantity']=execution.cumQty
                 self.all_trades.loc[self.all_trades[condition].index[-1],'SL']=self.sl[self.reqId]
-                self.all_trades.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_trades.csv',index=1)
+                self.all_trades.to_csv('/Users/apple/Documents/code/Python/IBAPI/Output/all_trades.csv',index=1)
                 
             else:
             
@@ -1237,13 +1230,13 @@ class TestApp(EWrapper,EClient):
                 except:
                     pass
                 self.all_trades.loc[datetime.now().strftime("%F %H:%M:%S")]=datetime.now().strftime("%F %H:%M:%S"),self.pair[self.reqId],'BUY' if execution.side=='BOT' else 'SELL',execution.price,execution.shares,execution.avgPrice,execution.cumQty,0.0,0.0,0.0,0.0,self.tp[self.reqId],self.sl[self.reqId]
-                self.all_trades.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_trades.csv',index=1)
+                self.all_trades.to_csv('/Users/apple/Documents/code/Python/IBAPI/Output/all_trades.csv',index=1)
 
                 
                  # add self.open_trades
                 condition=(self.all_trades['Symbol']==sym)&(self.all_trades['Exit Price']==0)
                 self.open_trades.loc[sym]=sym,pair,self.all_trades.loc[self.all_trades[condition].index[-1],'DateTime']
-                self.open_trades.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/open_trades.csv',index=1)
+                self.open_trades.to_csv('/Users/apple/Documents/code/Python/IBAPI/Output/open_trades.csv',index=1)
 
                  
         else:
@@ -1274,13 +1267,13 @@ class TestApp(EWrapper,EClient):
                     self.all_trades.loc[self.all_trades[condition].index[-1],'Exit Price']=execution.price
                     self.all_trades.loc[self.all_trades[condition].index[-1],'Average Price']=execution.avgPrice
                     self.all_trades.loc[self.all_trades[condition].index[-1],'Cumulative Quantity']=execution.cumQty
-                    self.all_trades.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_trades.csv',index=1)
+                    self.all_trades.to_csv('/Users/apple/Documents/code/Python/IBAPI/Output/all_trades.csv',index=1)
                 except:
                     pass 
                 
                 # update self.open_trades
                 self.open_trades.drop([sym],axis = 0,inplace = True) 
-                self.open_trades.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/open_trades.csv',index=1)
+                self.open_trades.to_csv('/Users/apple/Documents/code/Python/IBAPI/Output/open_trades.csv',index=1)
 
             except KeyError:
                 return
@@ -1307,7 +1300,7 @@ class TestApp(EWrapper,EClient):
         super().updateAccountValue(key, val, currency, accountName)
         # print("UpdateAccountValue. Key:", key, "Value:", val,"Currency:", currency, "AccountName:", accountName)
         self.account.loc[datetime.now().strftime("%F %H:%M:%S")]=datetime.now().strftime("%F %H:%M:%S"),accountName,key,val,currency
-        self.account.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/account.csv',index=1)
+        self.account.to_csv('/Users/apple/Documents/code/Python/IBAPI/Output/account.csv',index=1)
         return
     
     def updatePortfolio(self,contract:Contract,position:float,marketPrice:float,marketValue:float,averageCost:float,unrealizedPNL:float,realizedPNL:float,accountName:str):
@@ -1316,7 +1309,8 @@ class TestApp(EWrapper,EClient):
         # print(accountName)
         
         sym,pair=self.ContractToPair(contract)
-        if sym=='Not In Pair':
+        if sym[:12]=='Not In Pair:':
+            print(sym)
             return
         
         if len(self.open_trade[pair])!=0:
@@ -1331,16 +1325,16 @@ class TestApp(EWrapper,EClient):
             # update self.all_trades
             # condition=(self.all_trades['Symbol']==self.pair[self.reqId])&(self.all_trades['Cumulative Quantity']!=0)
             # self.all_trades.loc[self.all_trades[condition].index[-1],'Average Price']=round(self.all_trades.loc[self.all_trades[condition].index[-1],'Commision']+commissionReport.commission/self.ConversionRate[commissionReport.currency],2)
-            # self.all_trades.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_trades.csv',index=1)
+            # self.all_trades.to_csv('/Users/apple/Documents/code/Python/IBAPI/Output/all_trades.csv',index=1)
         
         try:
             self.all_positions.loc[sym]=sym,contract.secType,position,averageCost,round(unrealizedPNL/self.ConversionRate[contract.currency],2),round(realizedPNL/self.ConversionRate[contract.currency],2)
-            self.all_positions.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_positions.csv',index=0 )  
+            self.all_positions.to_csv('/Users/apple/Documents/code/Python/IBAPI/Output/all_positions.csv',index=0 )  
             
             # update self.all_trades
             condition=(self.all_trades['Symbol']==sym)&(self.all_trades['Exit Price']==0)
             self.all_trades.loc[self.all_trades[condition].index[-1],'Unrealized PNL']=round(unrealizedPNL/self.ConversionRate[contract.currency],2)
-            self.all_trades.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_trades.csv',index=1)
+            self.all_trades.to_csv('/Users/apple/Documents/code/Python/IBAPI/Output/all_trades.csv',index=1)
         except:
             pass
 
@@ -1360,7 +1354,7 @@ class TestApp(EWrapper,EClient):
                 # condition=(self.all_trades['Symbol']==self.pair[self.reqId])
                 condition=(self.all_trades['Symbol']==self.pair[self.reqId])&(self.all_trades['Exit Price']==0)
                 self.all_trades.loc[self.all_trades[condition].index[-1],'Commision']=round(self.all_trades.loc[self.all_trades[condition].index[-1],'Commision']+commissionReport.commission/self.ConversionRate[commissionReport.currency],2)
-                self.all_trades.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_trades.csv',index=1)
+                self.all_trades.to_csv('/Users/apple/Documents/code/Python/IBAPI/Output/all_trades.csv',index=1)
                 
             except KeyError:
                 pass
@@ -1382,7 +1376,7 @@ class TestApp(EWrapper,EClient):
                 self.all_trades.loc[self.all_trades[condition].index[-1],'Commision']=round(self.all_trades.loc[self.all_trades[condition].index[-1],'Commision']+commissionReport.commission/self.ConversionRate[commissionReport.currency],2)
                 self.all_trades.loc[self.all_trades[condition].index[-1],'Realized PNL']=round(commissionReport.realizedPNL/self.ConversionRate[self.OrderContract[self.reqId].currency],2)
                 self.all_trades.loc[self.all_trades[condition].index[-1],'Unrealized PNL']=0.0
-                self.all_trades.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_trades.csv',index=1)
+                self.all_trades.to_csv('/Users/apple/Documents/code/Python/IBAPI/Output/all_trades.csv',index=1)
                 
             except:
                 pass
@@ -1405,7 +1399,8 @@ class TestApp(EWrapper,EClient):
         
         sym,pair=self.ContractToPair(contract)
             
-        if sym=='Not In Pair':
+        if sym[:12]=='Not In Pair:':
+            print(sym)
             return
         
         
@@ -1553,7 +1548,7 @@ class TestApp(EWrapper,EClient):
 
 def read_token():
     config=configparser.ConfigParser()
-    config.read('/Users/apple/Documents/code/Python/IB-native-API/Settings/telegramConfig.cfg')
+    config.read('/Users/apple/Documents/code/Python/IBAPI/Settings/telegramConfig.cfg')
     token=config.get('Section_A','token')
     chatid=config.get('Section_A','chatid')
     return token,chatid
@@ -1566,16 +1561,16 @@ def send(text,token,chatid):
 # write trades record to csv
 def toCSV(tradeRecord,openTrade):
     df_tradeRecord=pd.DataFrame.from_dict(tradeRecord,orient='index')
-    df_tradeRecord.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/trades.csv',mode='w',index=1)
+    df_tradeRecord.to_csv('/Users/apple/Documents/code/Python/IBAPI/Output/trades.csv',mode='w',index=1)
         
     df_openTrade=pd.DataFrame.from_dict(openTrade,orient='index')
-    df_openTrade.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/openTrade.csv',mode='w',index=1)
+    df_openTrade.to_csv('/Users/apple/Documents/code/Python/IBAPI/Output/openTrade.csv',mode='w',index=1)
         
     return
 
 # write all_trades record to CSV
 def toCSV1(all_trades):
-    all_trades.to_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_trades.csv',mode='w',index=1)
+    all_trades.to_csv('/Users/apple/Documents/code/Python/IBAPI/Output/all_trades.csv',mode='w',index=1)
     
 
 # read trades record from csv
@@ -1583,11 +1578,11 @@ def toCSV1(all_trades):
 def fromCSV():
     dict_tradeRecord={}
     dict_openTrade={}
-    df_tradeRecord=pd.read_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/trades.csv',index_col=0)
+    df_tradeRecord=pd.read_csv('/Users/apple/Documents/code/Python/IBAPI/Output/trades.csv',index_col=0)
     for index in df_tradeRecord.index:
         dict_tradeRecord[index]=df_tradeRecord.loc[index].to_dict()
     dict_tradeRecord=dictTransform(dict_tradeRecord)
-    df_openTrade=pd.read_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/openTrade.csv',index_col=0)
+    df_openTrade=pd.read_csv('/Users/apple/Documents/code/Python/IBAPI/Output/openTrade.csv',index_col=0)
     df_openTrade['0']=df_openTrade['0'].fillna(-1)
     df_openTrade['0']=df_openTrade['0'].astype(int)
     df_openTrade['0']=df_openTrade['0'].astype(str)
@@ -1605,7 +1600,7 @@ def fromCSV():
 
 def fromCSV0():
     dict_openTrade={}
-    df_openTrade=pd.read_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/openTrade.csv',index_col=0)
+    df_openTrade=pd.read_csv('/Users/apple/Documents/code/Python/IBAPI/Output/openTrade.csv',index_col=0)
     df_openTrade['0']=df_openTrade['0'].fillna(-1)
     df_openTrade['0']=df_openTrade['0'].astype(int)
     df_openTrade['0']=df_openTrade['0'].astype(str)
@@ -1623,11 +1618,11 @@ def fromCSV0():
 
 # Read all_trades dataframe from CSV
 def fromCSV():
-    if not os.path.isfile('/Users/apple/Documents/code/Python/IB-native-API/Output/all_trades.csv') or not os.path.isfile('/Users/apple/Documents/code/Python/IB-native-API/Output/open_trades.csv'):
+    if not os.path.isfile('/Users/apple/Documents/code/Python/IBAPI/Output/all_trades.csv') or not os.path.isfile('/Users/apple/Documents/code/Python/IBAPI/Output/open_trades.csv'):
         return pd.DataFrame([], columns = ['DateTime', 'Symbol','Side','Price','Shares','Average Price','Cumulative Quantity','Exit Price','Unrealized PNL','Realized PNL','Commision','TP','SL']),pd.DataFrame([], columns = ['Symbol','Pair NO.','DateTime']) 
-    elif os.path.isfile('/Users/apple/Documents/code/Python/IB-native-API/Output/all_trades.csv') and os.path.isfile('/Users/apple/Documents/code/Python/IB-native-API/Output/open_trades.csv'):
-        df1=pd.read_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/all_trades.csv',index_col=0)
-        df2=pd.read_csv('/Users/apple/Documents/code/Python/IB-native-API/Output/open_trades.csv',index_col=0)
+    elif os.path.isfile('/Users/apple/Documents/code/Python/IBAPI/Output/all_trades.csv') and os.path.isfile('/Users/apple/Documents/code/Python/IBAPI/Output/open_trades.csv'):
+        df1=pd.read_csv('/Users/apple/Documents/code/Python/IBAPI/Output/all_trades.csv',index_col=0)
+        df2=pd.read_csv('/Users/apple/Documents/code/Python/IBAPI/Output/open_trades.csv',index_col=0)
         return df1,df2
             
 def main():
