@@ -50,8 +50,10 @@ same_direction not fit chart:api timestamp local timezone:same_direction doesn't
 daily restart and csv all gone：del open_trades record when empty：no opentrade
 place 2 order:record the timedelta with pre-order to make beyond 10 secs.
 xagusd error
+SL/TP:at least 10 pips
 
 -----To do
+event trigger structure
 try a test.openorder and orderstatus and completedOrder to get SL order and avoid order repeat. MKT2LMT,open order=0.network lag,send order but not yet execute,so send again at next bar.
 realtime HTF/turn-off HTF
 data resample structure.dict:symbol,action,mode,rr,bet,info(mintick),trade,self.trade and all_position combine and use dict. use for j in trade.keys():取代 for j in open_trade:,and considerate renew csv or add tradingview alert.
@@ -88,7 +90,6 @@ import pandas as pd
 import threading
 import time
 from datetime import datetime,timedelta
-import logging
 import sys
 sys.path.append('/Users/apple/Documents/code/Python/backtest')
 from AllStrategies import *
@@ -618,7 +619,8 @@ class TestApp(EWrapper,EClient):
             #check the signal
             if (self.all_positions.loc[self.pair[reqId],'Quantity']==0.0 or (self.all_positions.loc[self.pair[reqId],'Quantity']!=0.0 and self.mode[reqId]=='PYRAMIDING')) and bar.close>self.all_positions.loc[self.pair[reqId],'Average Cost'] and int(datetime.now().timestamp())-self.LastOrderTime[reqId]>5*self.timeframe1*60:
                 
-                self.signal1[reqId]=self.st._RSI(self.df1[reqId],reqId)
+                # self.signal1[reqId]=self.st._RSI(self.df1[reqId],reqId)
+                self.signal1[reqId]=self.st._RSI_SMA(self.df1[reqId],reqId)
                 if self.isBusy:
                     time.sleep(2)
                 
@@ -1152,7 +1154,8 @@ class TestApp(EWrapper,EClient):
         
         sym,pair=self.ContractToPair(contract)
         if sym[:12]=='Not In Pair:':
-            print(sym)
+            pass
+            # print(sym)
             return
         
         self.reqId=pair
@@ -1310,7 +1313,8 @@ class TestApp(EWrapper,EClient):
         
         sym,pair=self.ContractToPair(contract)
         if sym[:12]=='Not In Pair:':
-            print(sym)
+            pass
+            # print(sym)
             return
         
         if len(self.open_trade[pair])!=0:
@@ -1400,7 +1404,8 @@ class TestApp(EWrapper,EClient):
         sym,pair=self.ContractToPair(contract)
             
         if sym[:12]=='Not In Pair:':
-            print(sym)
+            pass
+            # print(sym)
             return
         
         
