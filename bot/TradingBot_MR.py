@@ -43,6 +43,8 @@ filter every timeframe:2,3,4,5
 df collum add direction
 check all TFs missed direction of dataframe
 all_trades is fail when not in pair exit.
+ifMultiTimeFrame to toggle mode
+
 
 -----testing----
 2nd time signal entry,scale-in,modify order: trade:'last_price':if open_trade didn't work:check Cumulative Quantity
@@ -161,6 +163,7 @@ class TestApp(EWrapper,EClient):
         config.read('/Users/apple/Documents/code/Python/IBAPI/Settings/config.cfg')
         self.BetAmout=float(config.get('MM','BetAmout'))
         self.rr=float(config.get('MM','rr'))
+        self.ifMultiTimeFrame=eval(config.get('MM','ifMultiTimeFrame'))
         self.timeframe1=int(config.get('MM','timeframe1'))
         self.timeframe2=int(config.get('MM','timeframe2'))
         self.timeframe3=int(config.get('MM','timeframe3'))
@@ -463,7 +466,7 @@ class TestApp(EWrapper,EClient):
             
             
             # higher time frame Bar close
-            if self.now_date != self.pre_date and self.now_date/(self.timeframe2*60)==self.now_date//(self.timeframe2*60):
+            if self.ifMultiTimeFrame==True and self.now_date != self.pre_date and self.now_date/(self.timeframe2*60)==self.now_date//(self.timeframe2*60):
                 # print(datetime.fromtimestamp(int(datetime.now().timestamp())),'self.timeframe2',self.timeframe2)
                 # print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.now_date,bar.date,self.now_date/self.timeframe2,self.now_date//self.timeframe2)
                 # self.df2[reqId]=self.df1[reqId].set_index('DateTime')
@@ -508,7 +511,7 @@ class TestApp(EWrapper,EClient):
                 # self.df2[reqId].to_csv('/Users/apple/Documents/code/Python/IBAPI/Output/df2_'+str(reqId)+'.csv',index=0 ,float_format='%.5f') 
                 
                 
-                if self.now_date != self.pre_date and self.now_date/(self.timeframe3*60)==self.now_date//(self.timeframe3*60):
+                if self.ifMultiTimeFrame==True and self.now_date != self.pre_date and self.now_date/(self.timeframe3*60)==self.now_date//(self.timeframe3*60):
                     # print(datetime.fromtimestamp(int(datetime.now().timestamp())),'self.timeframe3',self.timeframe3)
                     # print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.now_date,bar.date,self.now_date/self.timeframe3,self.now_date//self.timeframe3)
                     self.df3[reqId]=self.df1[reqId].set_index('DateTime').resample(str(self.timeframe3)+'min', closed='left', label='left').agg(self.res_dict)
@@ -549,7 +552,7 @@ class TestApp(EWrapper,EClient):
                     # self.df3[reqId].to_csv('/Users/apple/Documents/code/Python/IBAPI/Output/df3_'+str(reqId)+'.csv',index=0 ,float_format='%.5f') 
                     
                     
-                    if self.now_date != self.pre_date and self.now_date/(self.timeframe4*60)==self.now_date//(self.timeframe4*60):
+                    if self.ifMultiTimeFrame==True and self.now_date != self.pre_date and self.now_date/(self.timeframe4*60)==self.now_date//(self.timeframe4*60):
                         # print(datetime.fromtimestamp(int(datetime.now().timestamp())),'self.timeframe4',self.timeframe4)
                         # print(datetime.fromtimestamp(int(datetime.now().timestamp())),self.now_date,bar.date,self.now_date/self.timeframe4,self.now_date//self.timeframe3)
                         self.df4[reqId]=self.df1[reqId].set_index('DateTime').resample(str(self.timeframe4)+'min', closed='left', label='left').agg(self.res_dict)
@@ -591,7 +594,7 @@ class TestApp(EWrapper,EClient):
                         # self.df4[reqId].to_csv('/Users/apple/Documents/code/Python/IBAPI/Output/df4_'+str(reqId)+'.csv',index=0 ,float_format='%.5f') 
                        
                             
-                        if self.now_date != self.pre_date and self.now_date/(self.timeframe5*60)==self.now_date//(self.timeframe5*60):
+                        if self.ifMultiTimeFrame==True and self.now_date != self.pre_date and self.now_date/(self.timeframe5*60)==self.now_date//(self.timeframe5*60):
                             self.df5[reqId]=self.df1[reqId].set_index('DateTime').resample(str(self.timeframe5)+'min', closed='left', label='left').agg(self.res_dict)
                         
                             self.df5[reqId].dropna(axis=0, how='any', inplace=True)  # 去掉交易時間外的空行
@@ -628,13 +631,20 @@ class TestApp(EWrapper,EClient):
                 # print(self.direction[reqId])
                 # print(self.direction2[reqId])
                 
-                d2='SELL' if self.direction2[reqId]=='BUY' else 'BUY' if self.direction2[reqId]=='SELL' else 'None'
-                d3='SELL' if self.direction3[reqId]=='BUY' else 'BUY' if self.direction3[reqId]=='SELL' else 'None'
-                d4='SELL' if self.direction4[reqId]=='BUY' else 'BUY' if self.direction4[reqId]=='SELL' else 'None'
+                if self.ifMultiTimeFrame==True: 
+                    d2='SELL' if self.direction2[reqId]=='BUY' else 'BUY' if self.direction2[reqId]=='SELL' else 'None'
+                    d3='SELL' if self.direction3[reqId]=='BUY' else 'BUY' if self.direction3[reqId]=='SELL' else 'None'
+                    d4='SELL' if self.direction4[reqId]=='BUY' else 'BUY' if self.direction4[reqId]=='SELL' else 'None'
+                    ifEntry=self.signal1[reqId] ==self.direction[reqId] and self.signal1[reqId] != d2 and self.signal1[reqId] != d3 and self.signal1[reqId] != d4
+                elif self.ifMultiTimeFrame==False:
+                    ifEntry=self.signal1[reqId] in ['BUY','SELL']
+                else:
+                    print(datetime.fromtimestamp(int(datetime.now().timestamp())),'Wrong setting ifMultiTimeFrame')
+
                 
                 # if self.signal1[reqId] == self.direction2[reqId] and self.signal1[reqId] ==self.direction[reqId]: # if entry signal produced and check no position then entry
                 # if self.signal1[reqId] ==self.direction[reqId] and self.signal1[reqId] == self.direction2[reqId] and self.signal1[reqId] == self.direction3[reqId] and self.signal1[reqId] == self.direction4[reqId] : # if entry signal produced and check no position then entry
-                if self.signal1[reqId] ==self.direction[reqId] and self.signal1[reqId] != d2 and self.signal1[reqId] != d3 and self.signal1[reqId] != d4 : # if entry signal produced and check no position then entry
+                if ifEntry: # if entry signal produced and check no position then entry
                     if self.all_positions.loc[self.pair[reqId],'Quantity']==0.0 and self.mode[reqId]=='':
                         
                         self.entryprice[reqId]=round(bar.close,self.info[reqId].get('round'))
